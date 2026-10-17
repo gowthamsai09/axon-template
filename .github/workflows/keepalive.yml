@@ -1,0 +1,15 @@
+# STUB (Phase 5). Re-enables the digest workflow monthly (spec 6.7).
+name: keepalive
+on:
+  # TODO(Phase 5): enable  schedule: [{cron: "0 3 1 * *"}]
+  workflow_dispatch:
+permissions:
+  contents: read   # TODO(Phase 5): actions: write
+jobs:
+  enable:
+    if: "github.repository != 'gowthamsai09/axon-template'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable the digest workflow
+        run: echo "TODO(Phase 5) gh workflow enable digest.yml with the job token"

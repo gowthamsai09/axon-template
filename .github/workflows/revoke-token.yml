@@ -1,0 +1,20 @@
+# STUB (Phase 4). Revokes a caller token (spec 9.2 step 6).
+name: revoke-token
+on:
+  workflow_dispatch:
+    inputs:
+      token_id:
+        description: "Token id, e.g. tk_01H..."
+        required: true
+permissions:
+  contents: read   # TODO(Phase 4): add id-token: write
+jobs:
+  revoke:
+    if: "github.repository != 'gowthamsai09/axon-template'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Revoke
+        env:
+          TOKEN_ID: ${{ inputs.token_id }}
+        run: echo "TODO(Phase 4) validate TOKEN_ID, call DELETE /tokens/:id"

@@ -1,0 +1,42 @@
+# STUB (Phase 2). Real workflow: spec 6.6. Untrusted inputs reach code through env: only.
+name: digest
+run-name: ${{ inputs.task_id != '' && format('digest task {0}', inputs.task_id) || 'digest scheduled' }}
+on:
+  # TODO(Phase 2): enable  schedule: [{cron: "0 2 * * *"}]  (generated from profile timezone).
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: "Tier 3 task id (set by the gateway)"
+        required: false
+        default: ""
+      params:
+        description: "JSON string of request params (untrusted)"
+        required: false
+        default: "{}"
+permissions:
+  contents: read   # TODO(Phase 2): contents: write, for the state branch only
+concurrency:
+  group: digest
+  cancel-in-progress: false
+jobs:
+  run:
+    if: "github.repository != 'gowthamsai09/axon-template'"   # never runs inside the template repo itself
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main and the state branch
+        run: echo "TODO(Phase 2) pinned actions/checkout; second checkout ref state, continue-on-error"
+      - name: Set up Python 3.12 and install requirements
+        run: echo "TODO(Phase 2) pinned actions/setup-python; pip install -r requirements.txt"
+      - name: Run digest
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          TASK_PARAMS: ${{ inputs.params }}
+          # TODO(Phase 2): pass only the secrets named in spec 6.2 (LLM_API_KEY, SMTP_USER, ...)
+        run: echo "TODO(Phase 2) python -m digest.cli run --state-dir state"
+      - name: Failure notice
+        if: failure()
+        run: echo "TODO(Phase 2) python -m digest.cli notify-failure (never include secrets)"
+      - name: Commit state
+        if: always()
+        run: echo "TODO(Phase 2) commit and push the state branch (spec 6.6)"

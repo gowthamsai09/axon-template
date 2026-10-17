@@ -1,0 +1,15 @@
+# STUB (Phase 4). Binds this repo to the gateway via GitHub OIDC (spec 9.2).
+name: register
+on: workflow_dispatch
+permissions:
+  contents: read   # TODO(Phase 4): add id-token: write
+jobs:
+  register:
+    if: "github.repository != 'gowthamsai09/axon-template'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Register with the gateway
+        env:
+          GATEWAY: ${{ vars.GATEWAY_URL }}
+        run: echo "TODO(Phase 4) request an OIDC token with audience GATEWAY and POST /register"

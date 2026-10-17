@@ -1,0 +1,14 @@
+name: Onboarding (stub)
+description: Placeholder; the real form arrives in Phase 2 (spec 6.8).
+title: "Onboarding: "
+labels: ["onboarding"]
+body:
+  - type: markdown
+    attributes:
+      value: "TODO(Phase 2): fields that map to profile.yaml. Never enter API keys here."
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+    validations:
+      required: false

@@ -1,0 +1,25 @@
+# STUB (Phase 4). Mints a caller token; shown once in the job summary (spec 9.2 step 5).
+name: issue-token
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: "Label for the token (e.g. my-research-agent)"
+        required: true
+      expires_in_days:
+        description: "Lifetime in days"
+        required: false
+        default: "90"
+permissions:
+  contents: read   # TODO(Phase 4): add id-token: write
+jobs:
+  issue:
+    if: "github.repository != 'gowthamsai09/axon-template'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Request a token
+        env:
+          LABEL: ${{ inputs.label }}
+          EXPIRES_IN_DAYS: ${{ inputs.expires_in_days }}
+        run: echo "TODO(Phase 4) validate LABEL and EXPIRES_IN_DAYS, call POST /tokens, print once"

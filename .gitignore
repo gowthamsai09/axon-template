@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.cache/
+*.egg-info/
+# Secrets and local config. NEVER commit these.
+.env
+.env.*
+*.pem
+*.key
+# CI checkout of the hub repo (schema checks)
+hub/

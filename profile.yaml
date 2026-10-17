@@ -1,0 +1,29 @@
+# The ONLY file you normally edit (spec 6.1). Validate: python -m digest.cli validate-profile
+# Secrets (LLM key, SMTP, tokens) go in GitHub Settings > Secrets, NEVER in this file.
+version: 1
+interests:
+  topics: [open-source-llms, agents-tooling, rag, research-papers]
+  follow_entities: ["Qwen", "LangChain", "github:ollama/ollama"]
+  keywords_include: ["quantization", "local inference"]
+  keywords_exclude: ["crypto", "funding round"]
+sources:
+  use_shared_feed: true
+  extra_rss: []             # e.g. ["https://example.com/feed.xml"]
+delivery:
+  channel: email            # email | telegram | slack | rss
+  frequency: daily          # daily | weekly (weekly also needs: weekday: mon)
+  send_time_local: "07:30"
+  timezone: "Asia/Kolkata"  # converted to a UTC cron by the onboarding flow
+  depth: brief              # headlines | brief | detailed
+  max_items: 10
+  language: en
+summarizer:
+  provider: deepseek        # deepseek | huggingface | openai_compatible
+  model: deepseek-chat
+  fallback_provider: ""     # set fallback_provider AND fallback_model together, or leave both empty
+  fallback_model: ""
+  base_url: ""              # only for openai_compatible; must be https
+agent_access:
+  allow_inbound_agents: true
+  allowed_modes: [data, summary, digest]   # digest = Tier 3
+  max_tier3_runs_per_day: 5
