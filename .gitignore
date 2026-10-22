@@ -15,3 +15,8 @@ venv/
 *.key
 # CI checkout of the hub repo (schema checks)
 hub/
+# The state branch is checked out here by digest.yml; local dry-run output
+state/
+outbox/
+.local/
+*snapshot*

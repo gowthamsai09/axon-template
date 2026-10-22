@@ -1,5 +1,9 @@
 # Pins are what resolved in the authoring sandbox (Oct 2026). Dependabot keeps them fresh.
-# Later phases add: feedparser, trafilatura, selectolax, jinja2, tenacity, orjson (spec 2.2).
+# Later phases add: selectolax, tenacity, orjson (spec 2.2).
 pydantic==2.14.1
 pyyaml==6.0.3
 tzdata==2026.5
+httpx==0.28.1
+jinja2==3.1.6
+feedparser==6.0.14
+trafilatura==2.3.1

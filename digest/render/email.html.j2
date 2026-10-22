@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:16px;background:#f6f7f9;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;">
+<div style="max-width:640px;margin:0 auto;background:#ffffff;padding:20px;border-radius:8px;">
+<h1 style="font-size:20px;margin:0 0 4px 0;">{{ v.heading }}</h1>
+<p style="margin:0 0 16px 0;color:#666;font-size:13px;">{{ v.date }}</p>
+{% for n in v.notices %}
+<p style="background:#fff4e5;border-left:4px solid #e08a00;padding:8px 12px;font-size:13px;">Notice: {{ n }}</p>
+{% endfor %}
+{% for it in v.items %}
+<div style="margin:0 0 20px 0;padding-bottom:16px;border-bottom:1px solid #eee;">
+<h2 style="font-size:16px;margin:0 0 4px 0;">{% if it.url %}<a href="{{ it.url }}" style="color:#0b57d0;text-decoration:none;">{{ it.title }}</a>{% else %}{{ it.title }}{% endif %}</h2>
+<p style="margin:0 0 6px 0;color:#777;font-size:12px;">{{ it.source }} &middot; {{ it.published }}</p>
+{% if it.ai %}
+<p style="margin:0 0 6px 0;font-size:14px;">{{ it.one_line }}</p>
+{% if it.key_points %}
+<ul style="margin:0 0 6px 18px;padding:0;font-size:14px;">
+{% for p in it.key_points %}
+<li>{{ p }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if it.why_it_matters %}
+<p style="margin:0 0 6px 0;font-size:13px;color:#444;"><em>Why it matters:</em> {{ it.why_it_matters }}</p>
+{% endif %}
+{% else %}
+<p style="margin:0 0 6px 0;font-size:14px;">{{ it.snippet }}</p>
+{% endif %}
+{% if it.note %}
+<p style="margin:0 0 6px 0;font-size:12px;color:#a15c00;">{{ it.note }}</p>
+{% endif %}
+{% if it.feedback_up %}
+<p style="margin:0;font-size:12px;"><a href="{{ it.feedback_up }}">&#128077;</a> &nbsp; <a href="{{ it.feedback_down }}">&#128078;</a></p>
+{% endif %}
+</div>
+{% endfor %}
+<p style="font-size:12px;color:#777;margin:0;">{{ v.model_line }}<br>{{ v.usage_line }}{% if v.warning_count %}<br>{{ v.warning_count }} warning(s) in this run; see the Actions log.{% endif %}</p>
+</div>
+</body>
+</html>

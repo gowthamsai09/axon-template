@@ -1,8 +1,11 @@
-# STUB (Phase 2). Real workflow: spec 6.6. Untrusted inputs reach code through env: only.
+# Digest workflow (spec 6.6). Scheduled run plus Tier 3 dispatch from the gateway.
+# Untrusted inputs (task params) reach code through env: only, never inside run: scripts.
+# Actions are pinned to commit SHAs at the first push (docs/go-live.md in axon-feed lists how).
 name: digest
 run-name: ${{ inputs.task_id != '' && format('digest task {0}', inputs.task_id) || 'digest scheduled' }}
 on:
-  # TODO(Phase 2): enable  schedule: [{cron: "0 2 * * *"}]  (generated from profile timezone).
+  schedule:
+    - cron: "0 2 * * *"   # UTC; python -m digest.cli init prints the line for your timezone
   workflow_dispatch:
     inputs:
       task_id:
@@ -14,7 +17,7 @@ on:
         required: false
         default: "{}"
 permissions:
-  contents: read   # TODO(Phase 2): contents: write, for the state branch only
+  contents: write   # pushes the state branch only
 concurrency:
   group: digest
   cancel-in-progress: false
@@ -24,19 +27,69 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout main and the state branch
-        run: echo "TODO(Phase 2) pinned actions/checkout; second checkout ref state, continue-on-error"
-      - name: Set up Python 3.12 and install requirements
-        run: echo "TODO(Phase 2) pinned actions/setup-python; pip install -r requirements.txt"
+      - uses: actions/checkout@<pin-to-commit-sha>
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@<pin-to-commit-sha>
+        with:
+          ref: state
+          path: state
+          persist-credentials: false
+        continue-on-error: true   # first run: the state branch does not exist yet
+      - uses: actions/setup-python@<pin-to-commit-sha>
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
       - name: Run digest
         env:
+          # Repository variables (Settings > Variables): FEED_BASE is required.
+          FEED_BASE: ${{ vars.FEED_BASE }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          # Untrusted input: env only, never interpolated into the script below.
           TASK_ID: ${{ inputs.task_id }}
           TASK_PARAMS: ${{ inputs.params }}
-          # TODO(Phase 2): pass only the secrets named in spec 6.2 (LLM_API_KEY, SMTP_USER, ...)
-        run: echo "TODO(Phase 2) python -m digest.cli run --state-dir state"
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_API_KEY_FALLBACK: ${{ secrets.LLM_API_KEY_FALLBACK }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python -m digest.cli run --state-dir state
       - name: Failure notice
         if: failure()
-        run: echo "TODO(Phase 2) python -m digest.cli notify-failure (never include secrets)"
+        env:
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: python -m digest.cli notify-failure --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
       - name: Commit state
         if: always()
-        run: echo "TODO(Phase 2) commit and push the state branch (spec 6.6)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -d state ] || exit 0
+          cd state
+          if [ ! -d .git ]; then
+            git init -q
+            git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          fi
+          git config user.name "digest-bot"
+          git config user.email "digest-bot@users.noreply.github.com"
+          git checkout -q -B state
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no state changes"
+            exit 0
+          fi
+          git commit -q -m "state $(date -u +%FT%TZ)"
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=Authorization: basic $AUTH" push -q -u origin state

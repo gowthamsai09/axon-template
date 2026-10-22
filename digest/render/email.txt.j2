@@ -1,0 +1,29 @@
+{{ v.heading }} - {{ v.date }}
+{% for n in v.notices %}
+
+NOTICE: {{ n }}
+{% endfor %}
+{% for it in v.items %}
+
+{{ loop.index }}. {{ it.title }}
+   {{ it.source }} | {{ it.published }}{% if it.url %} | {{ it.url }}{% endif %}
+
+{% if it.ai %}
+   {{ it.one_line }}
+{% for p in it.key_points %}
+   - {{ p }}
+{% endfor %}
+{% if it.why_it_matters %}
+   Why it matters: {{ it.why_it_matters }}
+{% endif %}
+{% else %}
+   {{ it.snippet }}
+{% endif %}
+{% if it.note %}
+   [{{ it.note }}]
+{% endif %}
+{% endfor %}
+
+--
+{{ v.model_line }}
+{{ v.usage_line }}

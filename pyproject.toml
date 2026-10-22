@@ -16,6 +16,12 @@ strict = true
 plugins = ["pydantic.mypy"]
 exclude = ["^\\.venv/"]
 
+# feedparser ships no type information (no py.typed, no stubs). Its result is wrapped into
+# our own typed models in digest/feed_client.py. Config, not a "type: ignore" comment.
+[[tool.mypy.overrides]]
+module = ["feedparser", "feedparser.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]

@@ -123,5 +123,8 @@ def test_readable_error_and_cli(tmp_path: Path, capsys: pytest.CaptureFixture[st
         load_profile(f)
 
 
-def test_cli_stub_commands_exit_2() -> None:
-    assert cli_main(["run", "--state-dir", "state"]) == 2
+def test_cli_run_without_a_feed_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("FEED_BASE", raising=False)
+    args = ["run", "--profile", str(ROOT / "profile.yaml"), "--state-dir", str(tmp_path / "state")]
+    assert cli_main(args) == 2
+    assert not (tmp_path / "state").exists()

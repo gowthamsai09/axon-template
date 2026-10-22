@@ -1,0 +1,23 @@
+*{{ v.heading | tg }}* \- {{ v.date | tg }}
+{% for n in v.notices %}
+
+⚠ {{ n | tg }}
+{% endfor %}
+{% for it in v.items %}
+
+{{ loop.index }}\. {% if it.url %}[{{ it.title | tg }}]({{ it.url | replace('\\', '%5C') | replace(')', '%29') }}){% else %}{{ it.title | tg }}{% endif %}
+
+{% if it.ai %}
+{{ it.one_line | tg }}
+{% for p in it.key_points %}
+• {{ p | tg }}
+{% endfor %}
+{% else %}
+{{ it.snippet | tg }}
+{% endif %}
+{% if it.note %}
+_{{ it.note | tg }}_
+{% endif %}
+{% endfor %}
+
+_{{ v.model_line | tg }}_

@@ -19,7 +19,7 @@ delivery:
   language: en
 summarizer:
   provider: deepseek        # deepseek | huggingface | openai_compatible
-  model: deepseek-chat
+  model: deepseek-v4-flash  # deepseek-chat / deepseek-reasoner were retired 2026-07-24
   fallback_provider: ""     # set fallback_provider AND fallback_model together, or leave both empty
   fallback_model: ""
   base_url: ""              # only for openai_compatible; must be https

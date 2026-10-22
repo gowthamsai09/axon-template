@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml
 
-WF = Path(__file__).resolve().parent.parent / ".github" / "workflows"
+from digest.profile import load_profile
+from digest.schedule import cron_utc
+
+ROOT = Path(__file__).resolve().parent.parent
+WF = ROOT / ".github" / "workflows"
 FILES = sorted(WF.glob("*.yml"))
+REAL = {"ci.yml", "digest.yml"}  # everything else is still a stub (TODO markers required)
 SECRETS_OK = {
     "LLM_API_KEY", "LLM_API_KEY_FALLBACK", "SMTP_USER", "SMTP_PASS", "MAIL_TO",
     "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "SLACK_WEBHOOK_URL", "GITHUB_TOKEN",
@@ -62,7 +68,55 @@ def test_only_known_secrets_and_no_deploys(path: Path) -> None:
     assert not re.search(r"wrangler|npm publish|pages deploy", text)
 
 
-@pytest.mark.parametrize("path", [p for p in FILES if p.name != "ci.yml"], ids=lambda p: p.name)
+@pytest.mark.parametrize("path", [p for p in FILES if p.name not in REAL], ids=lambda p: p.name)
 def test_stub_steps_carry_todo_markers(path: Path) -> None:
     for s in steps(load(path)):
         assert "TODO" in (s.get("name", "") + s.get("run", "")), s.get("name")
+
+
+# ---- the real digest workflow (spec 6.6, 9.3, 10) -----------------------------------------
+
+DIGEST = WF / "digest.yml"
+
+
+def test_digest_keeps_task_inputs_and_run_name() -> None:
+    doc = load(DIGEST)
+    inputs = doc[True]["workflow_dispatch"]["inputs"]
+    assert set(inputs) == {"task_id", "params"}
+    assert "digest task" in doc["run-name"] and doc["concurrency"]["group"] == "digest"
+    assert doc["permissions"] == {"contents": "write"}
+
+
+def test_digest_passes_untrusted_input_through_env_only() -> None:
+    run_step = next(s for s in steps(load(DIGEST)) if s.get("name") == "Run digest")
+    assert run_step["env"]["TASK_ID"] == "${{ inputs.task_id }}"
+    assert run_step["env"]["TASK_PARAMS"] == "${{ inputs.params }}"
+    assert run_step["run"] == "python -m digest.cli run --state-dir state"
+    for s in steps(load(DIGEST)):
+        assert "${{" not in s.get("run", ""), s.get("name")
+
+
+def test_digest_checkouts_do_not_persist_credentials_and_state_may_be_missing() -> None:
+    checkouts = [s for s in steps(load(DIGEST)) if s.get("uses", "").startswith("actions/checkout")]
+    assert len(checkouts) == 2
+    assert all(c["with"]["persist-credentials"] is False for c in checkouts)
+    assert checkouts[1]["with"]["ref"] == "state" and checkouts[1]["continue-on-error"] is True
+
+
+def test_digest_failure_notice_and_state_commit_conditions() -> None:
+    by_name = {s.get("name"): s for s in steps(load(DIGEST))}
+    assert by_name["Failure notice"]["if"] == "failure()"
+    assert by_name["Commit state"]["if"] == "always()"
+    notice_env = by_name["Failure notice"]["env"]
+    assert set(notice_env) == {"SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "MAIL_TO"}
+
+
+def test_digest_never_runs_inside_the_template_repo() -> None:
+    job = next(iter(load(DIGEST)["jobs"].values()))
+    assert "gowthamsai09/axon-template" in job["if"]
+
+
+def test_digest_cron_matches_the_shipped_profile() -> None:
+    schedule = load(DIGEST)[True]["schedule"][0]["cron"]
+    profile = load_profile(ROOT / "profile.yaml")
+    assert schedule == cron_utc(profile.delivery, datetime(2026, 10, 20, tzinfo=UTC))
