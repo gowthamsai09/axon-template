@@ -125,6 +125,7 @@ def test_readable_error_and_cli(tmp_path: Path, capsys: pytest.CaptureFixture[st
 
 def test_cli_run_without_a_feed_exits_2(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("FEED_BASE", raising=False)
+    monkeypatch.chdir(tmp_path)  # a developer's own .env must not leak into this test
     args = ["run", "--profile", str(ROOT / "profile.yaml"), "--state-dir", str(tmp_path / "state")]
     assert cli_main(args) == 2
     assert not (tmp_path / "state").exists()

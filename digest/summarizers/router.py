@@ -86,7 +86,7 @@ class SummarizerRouter:
             if breaker.tripped:
                 continue
             try:
-                summary = summarize_with(client, item, depth, language, usage)
+                summary = summarize_with(client, item, depth, language, usage, warnings)
             except AuthError:
                 breaker.trip()
                 self._notice(

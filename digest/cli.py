@@ -31,6 +31,7 @@ from .delivery.email import (
     smtp_config_from_env,
     write_outbox,
 )
+from .envfile import EnvFileError, merge_env, parse_env_file
 from .extract import TextEnricher
 from .feed_client import make_reader
 from .pipeline import DigestRun, run_digest
@@ -472,6 +473,7 @@ def _parser() -> argparse.ArgumentParser:
     r.add_argument("--dry-run", action="store_true", help="write to --outbox, send nothing")
     r.add_argument("--outbox", type=Path, default=Path("outbox"))
     r.add_argument("--no-llm", action="store_true", help="extractive snippets only, no key needed")
+    r.add_argument("--env-file", type=Path, default=None, help="KEY=VALUE file (default: ./.env)")
     i = sub.add_parser("init", help="interactive profile.yaml creation")
     i.add_argument("--out", type=Path, default=Path("profile.yaml"))
     i.add_argument("--force", action="store_true")
@@ -479,7 +481,27 @@ def _parser() -> argparse.ArgumentParser:
     n.add_argument("--run-url", default="")
     n.add_argument("--dry-run", action="store_true")
     n.add_argument("--outbox", type=Path, default=Path("outbox"))
+    n.add_argument("--env-file", type=Path, default=None, help="KEY=VALUE file (default: ./.env)")
     return ap
+
+
+def _environment(
+    explicit: Mapping[str, str] | None, env_file: Path | None
+) -> tuple[Mapping[str, str], list[str]]:
+    """The process environment, plus an optional local .env (never inside GitHub Actions).
+    A caller-supplied mapping (tests) is used as is."""
+    if explicit is not None:
+        return explicit, []
+    real = dict(os.environ)
+    path = env_file
+    if path is None:
+        default = Path(".env")
+        if real.get("GITHUB_ACTIONS") == "true" or not default.is_file():
+            return real, []
+        path = default
+    values, warnings = parse_env_file(path)
+    names = ", ".join(sorted(values)) or "no variables"
+    return merge_env(values, real), [f"loaded {path}: {names}", *warnings]
 
 
 def main(
@@ -493,8 +515,16 @@ def main(
     ask: Ask = input,
 ) -> int:
     args = _parser().parse_args(argv)
-    environment = os.environ if env is None else env
     moment = now or datetime.now(UTC)
+    environment: Mapping[str, str] = {}
+    if args.cmd in {"run", "notify-failure"}:
+        try:
+            environment, notes = _environment(env, args.env_file)
+        except EnvFileError as exc:
+            print(exc, file=sys.stderr)
+            return EXIT_CONFIG
+        for note in notes:
+            print(note, file=sys.stderr)
     if args.cmd == "validate-profile":
         try:
             load_profile(args.path)

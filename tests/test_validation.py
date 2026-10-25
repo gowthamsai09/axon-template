@@ -9,6 +9,7 @@ from digest.profile import Depth
 from digest.summarizers.base import Summary
 from digest.summarizers.validation import (
     SummaryValidationError,
+    drop_overlong_key_points,
     parse_json_object,
     validate_summary,
 )
@@ -52,7 +53,8 @@ def test_parse_json_variants() -> None:
         ({"status": "maybe"}, "schema violation"),
         ({"tags": ["not-a-slug"]}, "schema violation"),
         ({"tags": ["rag"] * 5}, "schema violation"),
-        ({"one_line": "x" * 201}, "schema violation"),
+        ({"one_line": "x" * 201}, "one_line is too long"),
+        ({"why_it_matters": "x" * 301}, "why_it_matters is too long"),
         ({"source_url": "https://evil.example/"}, "source_url differs"),
         ({"key_points": ["a", "b", "c", "d"]}, "too many key_points"),
         ({"key_points": ["x" * 161]}, "too long"),
@@ -68,6 +70,19 @@ def test_parse_json_variants() -> None:
 def test_rejections(over: dict[str, object], message: str) -> None:
     with pytest.raises(SummaryValidationError, match=message):
         check(good(**over))
+
+
+def test_length_messages_state_the_exact_limit_and_no_model_text() -> None:
+    with pytest.raises(SummaryValidationError) as info:
+        check(good(key_points=["SECRETTEXT" * 20]))
+    assert "limit 160 characters" in str(info.value) and "SECRETTEXT" not in str(info.value)
+    with pytest.raises(SummaryValidationError, match=r"longest is 400") as long_info:
+        check(good(key_points=["x" * 400]))
+    assert long_info.value.repairable is True
+    with pytest.raises(SummaryValidationError, match=r"limit 3, got 4"):
+        check(good(key_points=["a", "b", "c", "d"]))
+    with pytest.raises(SummaryValidationError, match=r"limit 240 characters"):
+        check(good(key_points=["x" * 241]), "detailed")
 
 
 def test_source_url_may_appear_in_text() -> None:
@@ -100,3 +115,30 @@ def test_errors_never_echo_model_text() -> None:
             check(good(**raw))
         assert secret not in str(info.value)
     assert json.dumps(good())  # fixture itself is serialisable
+
+
+def test_only_length_violations_are_repairable() -> None:
+    repairable: list[dict[str, Any]] = [{"key_points": ["x" * 161]}, {"key_points": ["a"] * 4}]
+    not_repairable: list[dict[str, Any]] = [
+        {"one_line": "x" * 201},
+        {"source_url": "https://evil.example/"},
+        {"title": "<b>"},
+    ]
+    for over in repairable:
+        with pytest.raises(SummaryValidationError) as info:
+            check(good(**over))
+        assert info.value.repairable is True
+    for over in not_repairable:
+        with pytest.raises(SummaryValidationError) as info:
+            check(good(**over))
+        assert info.value.repairable is False
+
+
+def test_drop_overlong_key_points_is_pure_deletion() -> None:
+    raw = good(key_points=["short", "x" * 200, "also short", "third", "fourth"])
+    fixed = drop_overlong_key_points(raw, "brief")
+    assert fixed["key_points"] == ["short", "also short", "third"]
+    assert raw["key_points"] == ["short", "x" * 200, "also short", "third", "fourth"]  # untouched
+    assert check(fixed).key_points == ["short", "also short", "third"]
+    assert drop_overlong_key_points(good(key_points=["a"]), "headlines")["key_points"] == []
+    assert drop_overlong_key_points({"no": 1}, "brief") == {"no": 1}

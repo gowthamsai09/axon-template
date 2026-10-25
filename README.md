@@ -29,8 +29,9 @@ python -m digest.cli run --profile profile.yaml `
   --feed C:\Users\DGY3KOR\Desktop\Axon\Axon\feed-out `
   --state-dir .local\state --outbox .local\outbox --dry-run --no-llm
 
-# With a real summarizer (set the key for this session only; never put it in a file)
+# With a real summarizer: either set the key for this session only ...
 $env:LLM_API_KEY = Read-Host "LLM key"
+# ... or put it in a git-ignored .env (see below)
 python -m digest.cli run --profile profile.yaml --feed C:\Users\DGY3KOR\Desktop\Axon\Axon\feed-out `
   --state-dir .local\state --outbox .local\outbox --dry-run
 ```
@@ -38,5 +39,13 @@ python -m digest.cli run --profile profile.yaml --feed C:\Users\DGY3KOR\Desktop\
 `--dry-run` writes an `.eml` and an `.html` preview to the outbox, sends nothing and does not mark items
 as seen (summaries are still cached, so repeat runs are free). Behind a TLS-inspecting proxy set
 `$env:SSL_CERT_FILE` to your corporate CA bundle. Other commands: `validate-profile`, `init`, `notify-failure`.
+
+### Local `.env` (optional, local runs only)
+
+Copy `.env.example` to `.env` in the repo root and fill in the values (it is git-ignored). `run` and
+`notify-failure` read `./.env` automatically (or the file given with `--env-file`) and print the variable
+*names* they loaded, never the values. Real environment variables win over the file; empty values count as
+unset; the file is ignored inside GitHub Actions. Only the variables the pipeline reads are accepted.
+In GitHub, use Secrets and Variables instead.
 
 Secrets (LLM key, SMTP, bot tokens) go in **Settings -> Secrets and variables -> Actions**, never in files.

@@ -53,6 +53,36 @@ def test_invalid_output_is_retried_once_with_a_reminder() -> None:
     assert "Reminder" not in chat.calls[0][1]
 
 
+def test_overlong_key_points_are_dropped_after_the_retry_fails() -> None:
+    def too_long(user: str) -> str:
+        return summary_json(user, key_points=["Fine point.", "x" * 300, "Another fine one."])
+
+    chat = FakeChat([too_long, too_long])
+    notes: list[str] = []
+    usage = Usage()
+    summary = summarize_with(chat, ITEM, "brief", "en", usage, notes)
+    assert summary.key_points == ["Fine point.", "Another fine one."] and len(chat.calls) == 2
+    assert "longest is 300" in chat.calls[1][1]  # the retry names the exact problem
+    assert len(notes) == 1 and "dropped key point(s)" in notes[0]
+
+
+def test_other_violations_are_not_repaired() -> None:
+    def bad(user: str) -> str:
+        return summary_json(user, one_line="x" * 300, key_points=["y" * 300])
+
+    with pytest.raises(SummaryValidationError):
+        summarize_with(FakeChat([bad, bad]), ITEM, "brief", "en", Usage(), [])
+
+
+def test_router_reports_the_repair_as_a_warning() -> None:
+    def too_long(user: str) -> str:
+        return summary_json(user, key_points=["x" * 300])
+
+    res = router(FakeChat([too_long, too_long])).summarize(ITEM, "brief", "en")
+    assert res.summary is not None and res.summary.key_points == []
+    assert any("dropped key point(s)" in w for w in res.warnings)
+
+
 def test_two_invalid_outputs_raise() -> None:
     chat = FakeChat(["nope", "still nope"])
     with pytest.raises(SummaryValidationError):

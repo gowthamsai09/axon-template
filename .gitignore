@@ -11,6 +11,7 @@ venv/
 # Secrets and local config. NEVER commit these.
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 # CI checkout of the hub repo (schema checks)
