@@ -175,6 +175,9 @@ class AgentAccess(Strict):
     allow_inbound_agents: bool = True
     allowed_modes: list[Mode] = Field(default_factory=_all_modes)
     max_tier3_runs_per_day: int = Field(5, ge=1, le=20)
+    # Phase 4 (Appendix C 62): lets an authorized agent's run ALSO deliver the digest through the
+    # owner's configured channel. Off by default; older profile.yaml files keep working.
+    allow_owner_channel: bool = False
 
     @field_validator("allowed_modes")
     @classmethod

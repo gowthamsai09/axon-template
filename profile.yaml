@@ -27,3 +27,4 @@ agent_access:
   allow_inbound_agents: true
   allowed_modes: [data, summary, digest]   # digest = Tier 3
   max_tier3_runs_per_day: 5
+  allow_owner_channel: false   # true lets an agent run ALSO send the digest through your channel

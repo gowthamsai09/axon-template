@@ -1,8 +1,11 @@
-# STUB (Phase 4). Binds this repo to the gateway via GitHub OIDC (spec 9.2).
+# Binds this repository to the gateway with a GitHub OIDC identity token (spec 9.2, Appendix C 64).
+# Run it once, after installing the GitHub App on this repository and setting the repository variable
+# GATEWAY_URL (the gateway's public URL, exactly as configured there, no trailing slash).
 name: register
 on: workflow_dispatch
 permissions:
-  contents: read   # TODO(Phase 4): add id-token: write
+  id-token: write   # request the OIDC token; this is the only workflow family that needs it
+  contents: read
 jobs:
   register:
     if: "github.repository != 'gowthamsai09/axon-template'"
@@ -12,4 +15,22 @@ jobs:
       - name: Register with the gateway
         env:
           GATEWAY: ${{ vars.GATEWAY_URL }}
-        run: echo "TODO(Phase 4) request an OIDC token with audience GATEWAY and POST /register"
+        run: |
+          set -euo pipefail
+          GATEWAY="${GATEWAY%/}"
+          case "$GATEWAY" in
+            https://*) ;;
+            *) echo "Set the repository variable GATEWAY_URL to the gateway's https URL." >&2; exit 1 ;;
+          esac
+          AUD="$(jq -rn --arg a "$GATEWAY" '$a|@uri')"
+          OIDC="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD" | jq -r .value)"
+          echo "::add-mask::$OIDC"
+          CODE="$(curl -sS -o "$RUNNER_TEMP/register.json" -w '%{http_code}' -X POST "$GATEWAY/register" \
+            -H "Authorization: Bearer $OIDC" -H "Content-Type: application/json" -d '{}')"
+          if [ "$CODE" != "200" ]; then
+            echo "Registration failed (HTTP $CODE). Check that the GitHub App is installed on this repository." >&2
+            rm -f "$RUNNER_TEMP/register.json"
+            exit 1
+          fi
+          jq -r '"Registered " + .repo + " as " + .agent_id + " (default branch " + .default_branch + ")"' "$RUNNER_TEMP/register.json"
+          rm -f "$RUNNER_TEMP/register.json"

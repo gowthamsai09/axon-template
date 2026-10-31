@@ -1,13 +1,15 @@
-# STUB (Phase 4). Revokes a caller token (spec 9.2 step 6).
+# Revokes a caller token (spec 9.2 step 6, Appendix C 64). Revocation is immediate in the gateway's
+# location that handles the call and can take up to about a minute to reach every location.
 name: revoke-token
 on:
   workflow_dispatch:
     inputs:
       token_id:
-        description: "Token id, e.g. tk_01H..."
+        description: "Token id, e.g. tk_0123456789abcdef (shown when the token was issued)"
         required: true
 permissions:
-  contents: read   # TODO(Phase 4): add id-token: write
+  id-token: write
+  contents: read
 jobs:
   revoke:
     if: "github.repository != 'gowthamsai09/axon-template'"
@@ -16,5 +18,24 @@ jobs:
     steps:
       - name: Revoke
         env:
+          GATEWAY: ${{ vars.GATEWAY_URL }}
           TOKEN_ID: ${{ inputs.token_id }}
-        run: echo "TODO(Phase 4) validate TOKEN_ID, call DELETE /tokens/:id"
+        run: |
+          set -euo pipefail
+          GATEWAY="${GATEWAY%/}"
+          case "$GATEWAY" in
+            https://*) ;;
+            *) echo "Set the repository variable GATEWAY_URL to the gateway's https URL." >&2; exit 1 ;;
+          esac
+          if ! [[ "$TOKEN_ID" =~ ^tk_[a-f0-9]{16}$ ]]; then
+            echo "token_id must look like tk_ followed by 16 lowercase hex characters." >&2; exit 1
+          fi
+          AUD="$(jq -rn --arg a "$GATEWAY" '$a|@uri')"
+          OIDC="$(curl -fsS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$AUD" | jq -r .value)"
+          echo "::add-mask::$OIDC"
+          CODE="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$GATEWAY/tokens/$TOKEN_ID" -H "Authorization: Bearer $OIDC")"
+          case "$CODE" in
+            200) echo "Token $TOKEN_ID revoked." ;;
+            404) echo "No such token for this repository." >&2; exit 1 ;;
+            *) echo "Revoke failed (HTTP $CODE)." >&2; exit 1 ;;
+          esac

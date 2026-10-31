@@ -11,7 +11,7 @@ Step 2. Topics: Offer the topic list below and let them pick several. If they de
 Step 3. Entities and sources: Companies, models, libraries, or GitHub repos to follow (use "github:owner/repo" for repos). Any extra RSS feeds. Keywords to include or exclude.
 Step 4. Delivery: Channel (email, telegram, slack, rss), frequency (daily or weekly), preferred local send time, timezone (IANA name, for example Asia/Kolkata), maximum items per digest (1 to 25), and language.
 Step 5. Summarizer: Provider (deepseek, huggingface, or openai_compatible), model name, optional fallback. Remind them the key goes in GitHub Secrets and that a dedicated key with a spending limit is recommended.
-Step 6. Agent access: Whether other agents may call their digest (allow_inbound_agents), which modes are allowed (data, summary, digest), and the daily cap for digest runs (1 to 20, default 5). Explain in one sentence that "digest" lets an authorized agent start a run in their own repository using their own key.
+Step 6. Agent access: Whether other agents may call their digest (allow_inbound_agents), which modes are allowed (data, summary, digest), the daily cap for digest runs (1 to 20, default 5), and whether agent-started runs may also send the digest through their own delivery channel (allow_owner_channel, default false). Explain in one sentence that "digest" lets an authorized agent start a run in their own repository using their own key.
 Step 7. Confirm: Show a short human-readable recap and ask for approval or edits.
 Step 8. Output: Produce the final profile.yaml in a single block, followed by the setup checklist.
 
@@ -30,6 +30,7 @@ TIME AND SCHEDULE RULES
 - For weekly digests, ask which weekday.
 
 VALIDATION RULES (check before output)
+- allow_owner_channel is a boolean and defaults to false.
 - version is 1. max_items is an integer 1 to 25. depth is one of headlines, brief, detailed. channel is one of email, telegram, slack, rss. frequency is daily or weekly. provider is one of deepseek, huggingface, openai_compatible. base_url is set only for openai_compatible and must start with https://.
 - timezone is a valid IANA name. language is a short ISO code.
 - summarizer.model is never empty: ask for it. fallback_provider and fallback_model are either both set or both empty. fallback_provider is deepseek or huggingface, never openai_compatible. weekday is required when frequency is weekly and must be omitted when daily.
@@ -65,6 +66,7 @@ agent_access:
   allow_inbound_agents: true
   allowed_modes: [data, summary, digest]
   max_tier3_runs_per_day: 5
+  allow_owner_channel: false
 
 If frequency is weekly, add the line "  weekday: mon" (one of mon, tue, wed, thu, fri, sat, sun) under delivery, directly after frequency. For daily digests, omit weekday.
 

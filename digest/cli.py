@@ -229,14 +229,31 @@ def _execute(
         run.warnings = config_warnings + run.warnings
         delivered = "none"
         if task is not None:
-            if task.delivery == "owner_channel":
-                run.warnings.append(
-                    "owner_channel delivery is not enabled in this profile; returned only"
-                )
             run.warnings.extend(task.warnings)
+            delivered = "return_only"
+            if task.delivery == "owner_channel":
+                if not profile.agent_access.allow_owner_channel:
+                    run.warnings.append(
+                        "owner_channel delivery is not enabled in this profile "
+                        "(agent_access.allow_owner_channel); returned only"
+                    )
+                elif not run.entries:
+                    run.warnings.append("owner_channel: nothing to deliver")
+                else:
+                    try:
+                        sent = _deliver(
+                            profile, run, env, now,
+                            dry_run=args.dry_run, outbox=args.outbox, smtp_factory=smtp_factory,
+                        )  # fmt: skip
+                        delivered = f"owner_channel:{sent}"
+                    except (
+                        DeliveryError
+                    ) as exc:  # the result file is still written (never lose the run)
+                        run.warnings.append(
+                            f"owner_channel delivery failed: {redact(str(exc), secrets)}"
+                        )
             _write_task(state, task.task_id, profile, run, status="completed", now=now,
                         warnings=[*run.notices, *run.warnings])  # fmt: skip
-            delivered = "return_only"
         elif not run.entries:
             print("nothing new for this profile; no digest sent")
         else:
@@ -432,6 +449,11 @@ def run_init(ask: Ask, out: Path, *, force: bool, now: datetime) -> int:
                 _ask(ask, "Allowed modes (data, summary, digest)", "data, summary, digest")
             ),
             "max_tier3_runs_per_day": _num(_ask(ask, "Max digest runs per day (1-20)", "5")),
+            "allow_owner_channel": _ask(
+                ask, "Let agent runs also send the digest to you? (y/n)", "n"
+            )
+            .lower()
+            .startswith("y"),
         }
 
     data = {

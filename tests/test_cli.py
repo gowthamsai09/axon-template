@@ -292,7 +292,7 @@ def test_init_writes_a_valid_profile_and_prints_the_cron(
         "rag, agents-tooling", "Qwen", "", "crypto", "",                    # interests, sources
         "email", "weekly", "mon", "07:30", "Asia/Kolkata", "detailed", "8", "en",  # delivery
         "deepseek", "", "",                                                  # summarizer
-        "n", "data", "3",                                                    # agent access
+        "n", "data", "3", "n",                                                    # agent access
     )  # fmt: skip
     assert main(["init", "--out", str(out)], now=NOW, ask=ask) == 0
     profile: Profile = load_profile(out)
@@ -313,7 +313,7 @@ def test_init_reasks_an_invalid_section_and_protects_existing_files(tmp_path: Pa
         "", "", "", "", "", "abc", "", # delivery: max items "abc" is invalid
         "", "", "", "", "", "", "",    # delivery again, all defaults
         "", "", "",                    # summarizer defaults
-        "", "", "",                    # agent access defaults
+        "", "", "", "",                    # agent access defaults
     )  # fmt: skip
     assert main(["init", "--out", str(out)], now=NOW, ask=ask) == 0
     assert load_profile(out).interests.topics == ["rag"]

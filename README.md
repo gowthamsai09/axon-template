@@ -3,6 +3,10 @@
 GitHub **template repository** for the per-user pipeline of [Axon](https://github.com/gowthamsai09/Axon)
 (Plane 2). Click **Use this template** (not Fork) and make your copy **private**. Spec: sections 4.2, 6, 9.
 
+**Phase 4 status:** the registration workflows `register`, `issue-token` and `revoke-token` are real (they need the gateway,
+the GitHub App and the repository variable `GATEWAY_URL`; see `docs/github-app-setup.md` in `axon-gateway`), and
+`agent_access.allow_owner_channel` (default `false`) lets an agent-started run also send the digest through your channel.
+
 **Phase 2 status:** the digest pipeline works end to end: shared feed -> rank -> text -> summarize
 (DeepSeek, Hugging Face or any OpenAI-compatible endpoint, with fallback and an extractive last
 resort) -> email, with a state branch, a summary cache and Tier 3 task results. Telegram, Slack and
@@ -15,7 +19,8 @@ RSS delivery arrive in Phase 6; the onboarding issue form and gateway registrati
    - Secrets: `LLM_API_KEY` (use a dedicated key with a spending limit), `SMTP_USER`, `SMTP_PASS`, `MAIL_TO`;
      optional `LLM_API_KEY_FALLBACK`.
    - Variables: `FEED_BASE` (the published feed, `https://<org>.github.io/axon-feed/feed`); optional
-     `SMTP_HOST` and `SMTP_PORT` (default `smtp.gmail.com`, `465`; use port 587 for STARTTLS providers).
+     `SMTP_HOST` and `SMTP_PORT` (default `smtp.gmail.com`, `465`; use port 587 for STARTTLS providers);
+     `GATEWAY_URL` only if you use the agent gateway (Tier 3).
 3. Run the **digest** workflow once by hand (Actions -> digest -> Run workflow).
 
 ## Run it locally (Windows, PowerShell)

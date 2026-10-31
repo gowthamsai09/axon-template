@@ -17,7 +17,13 @@ from digest.schedule import cron_utc
 ROOT = Path(__file__).resolve().parent.parent
 WF = ROOT / ".github" / "workflows"
 FILES = sorted(WF.glob("*.yml"))
-REAL = {"ci.yml", "digest.yml"}  # everything else is still a stub (TODO markers required)
+REAL = {
+    "ci.yml",
+    "digest.yml",
+    "register.yml",
+    "issue-token.yml",
+    "revoke-token.yml",
+}  # everything else is still a stub (TODO markers required)
 SECRETS_OK = {
     "LLM_API_KEY", "LLM_API_KEY_FALLBACK", "SMTP_USER", "SMTP_PASS", "MAIL_TO",
     "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "SLACK_WEBHOOK_URL", "GITHUB_TOKEN",
