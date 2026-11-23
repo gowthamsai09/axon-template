@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Annotated, Literal, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from ..profile import Depth, TopicSlug
 
@@ -34,7 +34,7 @@ class Summary(Strict):
     entities: list[Annotated[str, Field(max_length=100)]] = Field(max_length=8)
     notable_figures: list[NotableFigure] = Field(max_length=10)
     source_url: str = Field(max_length=2048)
-    injection_flag: bool
+    injection_flag: StrictBool  # a string such as "false" is invalid output, not coerced
 
 
 @dataclass

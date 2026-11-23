@@ -1,56 +1,24 @@
 # axon-template
 
-GitHub **template repository** for the per-user pipeline of [Axon](https://github.com/gowthamsai09/Axon)
-(Plane 2). Click **Use this template** (not Fork) and make your copy **private**. Spec: sections 4.2, 6, 9.
+Plane 2 of [Axon](https://github.com/gowthamsai09/Axon): the per-user digest pipeline. Create your own **private** repo
+with "Use this template", edit `profile.yaml`, add your secrets, and a scheduled workflow summarizes the shared feed
+with your own LLM key and e-mails you. Spec: sections 4.2 and 6.
 
-**Phase 4 status:** the registration workflows `register`, `issue-token` and `revoke-token` are real (they need the gateway,
-the GitHub App and the repository variable `GATEWAY_URL`; see `docs/github-app-setup.md` in `axon-gateway`), and
-`agent_access.allow_owner_channel` (default `false`) lets an agent-started run also send the digest through your channel.
-
-**Phase 2 status:** the digest pipeline works end to end: shared feed -> rank -> text -> summarize
-(DeepSeek, Hugging Face or any OpenAI-compatible endpoint, with fallback and an extractive last
-resort) -> email, with a state branch, a summary cache and Tier 3 task results. Telegram, Slack and
-RSS delivery arrive in Phase 6; the onboarding issue form and gateway registration in Phases 2b and 4.
-
-## Set up your copy
-
-1. Edit `profile.yaml` (or run `python -m digest.cli init`; it prints the UTC cron line for `digest.yml`).
-2. **Settings -> Secrets and variables -> Actions**
-   - Secrets: `LLM_API_KEY` (use a dedicated key with a spending limit), `SMTP_USER`, `SMTP_PASS`, `MAIL_TO`;
-     optional `LLM_API_KEY_FALLBACK`.
-   - Variables: `FEED_BASE` (the published feed, `https://<org>.github.io/axon-feed/feed`); optional
-     `SMTP_HOST` and `SMTP_PORT` (default `smtp.gmail.com`, `465`; use port 587 for STARTTLS providers);
-     `GATEWAY_URL` only if you use the agent gateway (Tier 3).
-3. Run the **digest** workflow once by hand (Actions -> digest -> Run workflow).
-
-## Run it locally (Windows, PowerShell)
+**Status:** Phases 2, 4 and 5 built and tested locally. Real e-mail, real Actions runs and a live provider call are
+first-push checks. Telegram, Slack and RSS delivery and the onboarding form are Phase 6.
 
 ```powershell
-conda activate axon
 pip install -r requirements.txt -r requirements-dev.txt
-
-# No key, no email, no network except the feed folder: extractive snippets into .local\outbox
-python -m digest.cli run --profile profile.yaml `
-  --feed C:\Users\DGY3KOR\Desktop\Axon\Axon\feed-out `
-  --state-dir .local\state --outbox .local\outbox --dry-run --no-llm
-
-# With a real summarizer: either set the key for this session only ...
-$env:LLM_API_KEY = Read-Host "LLM key"
-# ... or put it in a git-ignored .env (see below)
-python -m digest.cli run --profile profile.yaml --feed C:\Users\DGY3KOR\Desktop\Axon\Axon\feed-out `
-  --state-dir .local\state --outbox .local\outbox --dry-run
+python -m digest.cli init                     # interactive profile.yaml
+python -m digest.cli run --profile profile.yaml --feed ..\feed-out --state-dir .local\state --outbox .local\outbox --dry-run
+python -m evals.run replay                    # offline check of the evaluation harness
+ruff format .; ruff check .; mypy .; pytest
 ```
+Secrets (GitHub Settings, never in files): `LLM_API_KEY`, `SMTP_USER`, `SMTP_PASS`, `MAIL_TO`, optional
+`LLM_API_KEY_FALLBACK`. Variables: `FEED_BASE`, optional `SMTP_HOST`, `SMTP_PORT`, `GATEWAY_URL` (Tier 3).
 
-`--dry-run` writes an `.eml` and an `.html` preview to the outbox, sends nothing and does not mark items
-as seen (summaries are still cached, so repeat runs are free). Behind a TLS-inspecting proxy set
-`$env:SSL_CERT_FILE` to your corporate CA bundle. Other commands: `validate-profile`, `init`, `notify-failure`.
-
-### Local `.env` (optional, local runs only)
-
-Copy `.env.example` to `.env` in the repo root and fill in the values (it is git-ignored). `run` and
-`notify-failure` read `./.env` automatically (or the file given with `--env-file`) and print the variable
-*names* they loaded, never the values. Real environment variables win over the file; empty values count as
-unset; the file is ignored inside GitHub Actions. Only the variables the pipeline reads are accepted.
-In GitHub, use Secrets and Variables instead.
-
-Secrets (LLM key, SMTP, bot tokens) go in **Settings -> Secrets and variables -> Actions**, never in files.
+**Safety:** summaries come from untrusted text and are validated (shape, caps, only the source URL, figures present in the
+source); output containing your key is rejected; fetching is SSRF-guarded; the failure e-mail carries only a validated run link.
+`keepalive.yml` re-enables the digest workflow monthly. `evals/` scores the summarizer on your own model
+(`python -m evals.run live`, costs tokens); its 12 seed cases use hand-written reference answers, and the human-checked set
+of 30 to 50 cases is yours to complete (`evals/README.md`).

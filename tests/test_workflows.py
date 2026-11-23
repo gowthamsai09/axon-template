@@ -23,6 +23,7 @@ REAL = {
     "register.yml",
     "issue-token.yml",
     "revoke-token.yml",
+    "keepalive.yml",
 }  # everything else is still a stub (TODO markers required)
 SECRETS_OK = {
     "LLM_API_KEY", "LLM_API_KEY_FALLBACK", "SMTP_USER", "SMTP_PASS", "MAIL_TO",

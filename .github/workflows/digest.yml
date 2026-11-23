@@ -1,6 +1,6 @@
 # Digest workflow (spec 6.6). Scheduled run plus Tier 3 dispatch from the gateway.
 # Untrusted inputs (task params) reach code through env: only, never inside run: scripts.
-# Actions are pinned to commit SHAs at the first push (docs/go-live.md in axon-feed lists how).
+# Actions are pinned to commit SHAs (the table is docs/pinning-actions.md in the hub repo).
 name: digest
 run-name: ${{ inputs.task_id != '' && format('digest task {0}', inputs.task_id) || 'digest scheduled' }}
 on:
@@ -27,16 +27,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@<pin-to-commit-sha>
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           persist-credentials: false
-      - uses: actions/checkout@<pin-to-commit-sha>
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           ref: state
           path: state
           persist-credentials: false
         continue-on-error: true   # first run: the state branch does not exist yet
-      - uses: actions/setup-python@<pin-to-commit-sha>
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: "3.12"
           cache: pip

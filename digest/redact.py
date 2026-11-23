@@ -16,17 +16,17 @@ SECRET_ENV_NAMES = (
     "GITHUB_TOKEN",
     "GH_TOKEN",
 )
-_MIN_SECRET_LEN = 6
+MIN_SECRET_LEN = 6
 
 
 def secret_values(env: Mapping[str, str]) -> list[str]:
     """Values of the known secret variables that are set (longest first)."""
-    found = {env[n] for n in SECRET_ENV_NAMES if len(env.get(n, "")) >= _MIN_SECRET_LEN}
+    found = {env[n] for n in SECRET_ENV_NAMES if len(env.get(n, "")) >= MIN_SECRET_LEN}
     return sorted(found, key=len, reverse=True)
 
 
 def redact(text: str, secrets: Iterable[str]) -> str:
     for s in secrets:
-        if len(s) >= _MIN_SECRET_LEN:
+        if len(s) >= MIN_SECRET_LEN:
             text = text.replace(s, "***")
     return text

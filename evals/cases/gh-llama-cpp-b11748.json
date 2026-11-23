@@ -1,0 +1,56 @@
+{
+ "id": "gh-llama-cpp-b11748",
+ "synthetic": false,
+ "depth": "brief",
+ "language": "en",
+ "source": {
+  "id": "e4159de940dd7513",
+  "title": "ggml-org/llama.cpp b11748",
+  "url": "https://github.com/ggml-org/llama.cpp/releases/tag/b11748",
+  "source_name": "github-releases",
+  "published_at": "2026-10-20T00:27:18Z",
+  "text": "sycl : fix get_rows on reordered quantized weights (#30430) Website: Attestations: macOS/iOS: macOS Apple Silicon (arm64) macOS Apple Silicon (arm64, KleidiAI enabled) DISABLED macOS Intel (x64) iOS XCFramework Linux: Ubuntu x64 (CPU) Ubuntu arm64 (CPU) Ubuntu s390x (CPU)…"
+ },
+ "expect": {
+  "status": "ok",
+  "required_terms": [
+   "b11748",
+   "get_rows"
+  ],
+  "forbidden_terms": [
+   "performance",
+   "faster"
+  ],
+  "min_coverage": 1.0,
+  "injection_flag": false
+ },
+ "recorded": {
+  "kind": "reference",
+  "note": "Reference answer written by hand from the source text (not a model output).",
+  "response": {
+   "status": "ok",
+   "title": "ggml-org/llama.cpp b11748",
+   "one_line": "llama.cpp release b11748 includes a sycl fix for get_rows on reordered quantized weights.",
+   "key_points": [
+    "The release notes list a sycl fix for get_rows on reordered quantized weights (#30430).",
+    "Build targets listed include macOS Apple Silicon, macOS Intel, iOS XCFramework and several Ubuntu CPU builds."
+   ],
+   "why_it_matters": "",
+   "tags": [
+    "small-local-models",
+    "mlops-infra"
+   ],
+   "entities": [
+    "llama.cpp"
+   ],
+   "notable_figures": [
+    {
+     "value": "b11748",
+     "context": "release tag"
+    }
+   ],
+   "source_url": "https://github.com/ggml-org/llama.cpp/releases/tag/b11748",
+   "injection_flag": false
+  }
+ }
+}

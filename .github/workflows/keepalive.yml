@@ -1,15 +1,25 @@
-# STUB (Phase 5). Re-enables the digest workflow monthly (spec 6.7).
+# Re-enables the digest workflow monthly (spec 6.7, Appendix C 80).
+# GitHub disables scheduled workflows after 60 days without repository activity in PUBLIC repositories;
+# private repositories (the intended setup) are not auto-disabled, so this is a cheap precaution.
+# Limits: if this workflow itself gets disabled it cannot save itself; a manual Run workflow re-arms it.
+# No secrets, no third-party actions; the job token can only manage workflows (actions: write).
 name: keepalive
 on:
-  # TODO(Phase 5): enable  schedule: [{cron: "0 3 1 * *"}]
+  schedule:
+    - cron: "0 3 1 * *"   # UTC, 03:00 on the 1st of each month; best effort
   workflow_dispatch:
 permissions:
-  contents: read   # TODO(Phase 5): actions: write
+  actions: write
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
 jobs:
   enable:
-    if: "github.repository != 'gowthamsai09/axon-template'"
+    if: "github.repository != 'gowthamsai09/axon-template'"   # never runs inside the template repo itself
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Enable the digest workflow
-        run: echo "TODO(Phase 5) gh workflow enable digest.yml with the job token"
+      - name: Re-enable the digest workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable digest.yml --repo "$GITHUB_REPOSITORY"

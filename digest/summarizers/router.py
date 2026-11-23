@@ -60,6 +60,7 @@ class SummarizerRouter:
     fallback: ChatClient | None = None
     threshold: int = BREAKER_THRESHOLD
     notices: list[str] = field(default_factory=list)
+    forbidden: tuple[str, ...] = ()  # secret values that must never appear in model output
     _breakers: dict[int, Breaker] = field(default_factory=dict, init=False)
 
     def __post_init__(self) -> None:
@@ -86,7 +87,9 @@ class SummarizerRouter:
             if breaker.tripped:
                 continue
             try:
-                summary = summarize_with(client, item, depth, language, usage, warnings)
+                summary = summarize_with(
+                    client, item, depth, language, usage, warnings, self.forbidden
+                )
             except AuthError:
                 breaker.trip()
                 self._notice(
@@ -175,4 +178,5 @@ def get_summarizer(
                 warnings.append(w)
         else:
             warnings.append("fallback provider configured but LLM_API_KEY_FALLBACK is not set")
-    return SummarizerRouter(primary, fallback), warnings
+    held = tuple(v for v in (key, env.get("LLM_API_KEY_FALLBACK", "")) if v)
+    return SummarizerRouter(primary, fallback, forbidden=held), warnings

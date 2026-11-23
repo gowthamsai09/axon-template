@@ -1,0 +1,56 @@
+{
+ "id": "hn-harness-engineering-101",
+ "synthetic": false,
+ "depth": "brief",
+ "language": "en",
+ "source": {
+  "id": "9d4b9e1fe5ab5819",
+  "title": "Harness Engineering 101: The LLM is the brain, the harness is the body",
+  "url": "https://github.com/IsuruMaduranga/harness-engineering-101",
+  "source_name": "hn-ai",
+  "published_at": "2026-10-19T12:07:41Z",
+  "text": "The LLM is the brain. The harness is the body. Version 1.1, October 2026. AI usage disclosure: I drafted every chapter myself, from what I learned building WSO2 MI Copilot, WSO2 BI Copilot and One Code. I used Claude Code and One Code to reorder each chapter so it leads with…"
+ },
+ "expect": {
+  "status": "ok",
+  "required_terms": [
+   "harness",
+   "brain"
+  ],
+  "forbidden_terms": [],
+  "min_coverage": 1.0,
+  "injection_flag": false
+ },
+ "recorded": {
+  "kind": "reference",
+  "note": "Reference answer written by hand from the source text (not a model output).",
+  "response": {
+   "status": "ok",
+   "title": "Harness Engineering 101: The LLM is the brain, the harness is the body",
+   "one_line": "A guide to harness engineering compares the LLM to a brain and the harness to a body; this is version 1.1, dated October 2026.",
+   "key_points": [
+    "The author says the LLM is the brain and the harness is the body.",
+    "The author drafted every chapter from experience building WSO2 MI Copilot, WSO2 BI Copilot and One Code.",
+    "The author used Claude Code and One Code to reorder chapters."
+   ],
+   "why_it_matters": "",
+   "tags": [
+    "agents-tooling"
+   ],
+   "entities": [
+    "WSO2 MI Copilot",
+    "WSO2 BI Copilot",
+    "One Code",
+    "Claude Code"
+   ],
+   "notable_figures": [
+    {
+     "value": "1.1",
+     "context": "document version"
+    }
+   ],
+   "source_url": "https://github.com/IsuruMaduranga/harness-engineering-101",
+   "injection_flag": false
+  }
+ }
+}

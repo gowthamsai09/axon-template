@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@<pin-to-commit-sha>  # TODO: resolve per docs/pinning-actions.md in the hub repo
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           persist-credentials: false
-      - uses: actions/setup-python@<pin-to-commit-sha>  # TODO: resolve per docs/pinning-actions.md in the hub repo
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: "3.12"
           cache: pip
@@ -31,19 +31,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@<pin-to-commit-sha>  # TODO: resolve per docs/pinning-actions.md in the hub repo
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           persist-credentials: false
-      - uses: actions/checkout@<pin-to-commit-sha>  # TODO: resolve per docs/pinning-actions.md in the hub repo
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
         with:
           repository: gowthamsai09/Axon
           path: hub
           persist-credentials: false
-      - uses: actions/setup-python@<pin-to-commit-sha>  # TODO: resolve per docs/pinning-actions.md in the hub repo
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements*.txt
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Exported schemas must equal the hub copy
         run: python -m scripts.export_schemas --check hub/schemas
+      - name: Shared corpora and prompts (hub) against the real guards, sanitizer and validator
+        env:
+          HUB_CORPUS_DIR: ${{ github.workspace }}/hub/corpus/injection
+          HUB_DIR: ${{ github.workspace }}/hub
+          REQUIRE_HUB_CORPUS: "1"
+          REQUIRE_HUB_PROMPTS: "1"
+        run: python -m scripts.check_prompt_sync --hub hub && pytest tests/test_injection_corpus.py tests/test_ssrf.py tests/test_prompt_hub.py

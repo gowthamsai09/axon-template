@@ -56,8 +56,15 @@ def test_dns_to_private_blocked_and_public_ok() -> None:
     check_public_url("https://example.com/", PUBLIC)
 
 
-def _fetcher(handler: httpx.MockTransport, **kw: int) -> SafeFetcher:
-    return SafeFetcher(httpx.Client(transport=handler), resolver=PUBLIC, **kw)
+def _fetcher(
+    handler: httpx.MockTransport, max_bytes: int = 2_000_000, max_redirects: int = 5
+) -> SafeFetcher:
+    return SafeFetcher(
+        httpx.Client(transport=handler),
+        resolver=PUBLIC,
+        max_bytes=max_bytes,
+        max_redirects=max_redirects,
+    )
 
 
 def test_fetch_ok() -> None:

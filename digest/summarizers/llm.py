@@ -5,6 +5,7 @@ sees only those summaries)."""
 from __future__ import annotations
 
 from ..profile import Depth
+from ..redact import MIN_SECRET_LEN
 from .base import ChatClient, SourceItem, Summary, Usage
 from .prompting import (
     RETRY_REMINDER,
@@ -35,6 +36,7 @@ def _one(
     *,
     merge: bool = False,
     notes: list[str] | None = None,
+    forbidden: tuple[str, ...] = (),
 ) -> Summary:
     reminder = ""
     last: SummaryValidationError | None = None
@@ -46,6 +48,10 @@ def _one(
         result = client.complete(system, user)
         usage.add(result.usage)
         try:
+            # Zero key custody (Appendix C 58): a secret the pipeline holds must never come back
+            # out of the model. Counts as invalid output; the message never contains the value.
+            if any(len(f) >= MIN_SECRET_LEN and f in result.text for f in forbidden):
+                raise SummaryValidationError("output contains a secret")
             last_raw = parse_json_object(result.text)
             return validate_summary(
                 last_raw,
@@ -90,19 +96,51 @@ def summarize_with(
     language: str,
     usage: Usage,
     notes: list[str] | None = None,
+    forbidden: tuple[str, ...] = (),
 ) -> Summary:
     """Raises LLMError subclasses (transport) or SummaryValidationError (bad output)."""
     document = document_for(item)
     if len(document) <= SINGLE_PASS_CHARS:
-        return _one(client, item, depth, language, document, document, usage, notes=notes)
+        return _one(
+            client,
+            item,
+            depth,
+            language,
+            document,
+            document,
+            usage,
+            notes=notes,
+            forbidden=forbidden,
+        )
     partials: list[Summary] = []
     for chunk in chunk_text(document):
-        part = _one(client, item, depth, language, chunk, document, usage, notes=notes)
+        part = _one(
+            client, item, depth, language, chunk, document, usage, notes=notes, forbidden=forbidden
+        )
         if part.status == "ok":
             partials.append(part)
     if not partials:  # every chunk was empty or flagged: ask once on the first chunk's verdict
         return _one(
-            client, item, depth, language, chunk_text(document)[0], document, usage, notes=notes
+            client,
+            item,
+            depth,
+            language,
+            chunk_text(document)[0],
+            document,
+            usage,
+            notes=notes,
+            forbidden=forbidden,
         )
     merge_doc = _merge_document(partials)
-    return _one(client, item, depth, language, merge_doc, document, usage, merge=True, notes=notes)
+    return _one(
+        client,
+        item,
+        depth,
+        language,
+        merge_doc,
+        document,
+        usage,
+        merge=True,
+        notes=notes,
+        forbidden=forbidden,
+    )

@@ -1,0 +1,50 @@
+{
+ "id": "hf-papers-harness-policy",
+ "synthetic": false,
+ "depth": "brief",
+ "language": "en",
+ "source": {
+  "id": "aa4ccde86d8a3d2e",
+  "title": "Self-Evolving Coding Agents via Harness-Policy Optimization",
+  "url": "https://arxiv.org/abs/2610.22791",
+  "source_name": "hf-daily-papers",
+  "published_at": "2026-10-20T00:00:00Z",
+  "text": "Large language model (LLM) agents have shown promising potential in coding tasks, and their performance is jointly determined by the policy model and the harness that mediates their interaction with the environment. Indeed, harness and policy are mutually reinforcing and…"
+ },
+ "expect": {
+  "status": "ok",
+  "required_terms": [
+   "harness",
+   "policy"
+  ],
+  "forbidden_terms": [
+   "benchmark",
+   "state-of-the-art"
+  ],
+  "min_coverage": 1.0,
+  "injection_flag": false
+ },
+ "recorded": {
+  "kind": "reference",
+  "note": "Reference answer written by hand from the source text (not a model output).",
+  "response": {
+   "status": "ok",
+   "title": "Self-Evolving Coding Agents via Harness-Policy Optimization",
+   "one_line": "The text says coding agent performance depends on both the policy model and the harness around it, and that the two reinforce each other.",
+   "key_points": [
+    "Agents built on large language models show promise in coding tasks.",
+    "Performance is jointly determined by the policy model and the harness.",
+    "Harness and policy are described as mutually reinforcing."
+   ],
+   "why_it_matters": "",
+   "tags": [
+    "agents-tooling",
+    "research-papers"
+   ],
+   "entities": [],
+   "notable_figures": [],
+   "source_url": "https://arxiv.org/abs/2610.22791",
+   "injection_flag": false
+  }
+ }
+}

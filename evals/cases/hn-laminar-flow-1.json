@@ -1,0 +1,59 @@
+{
+ "id": "hn-laminar-flow-1",
+ "synthetic": false,
+ "depth": "brief",
+ "language": "en",
+ "source": {
+  "id": "6a23445afa1896da",
+  "title": "Launch HN: Laminar (YC S24) – RL-trained model that finds errors in agent traces",
+  "url": "https://news.ycombinator.com/item?id=50154029",
+  "source_name": "hn-ai",
+  "published_at": "2026-10-19T16:00:18Z",
+  "text": "Hi HN, we’re Robert and Din from Laminar. We’ve been building open-source observability for AI agents since 2024. Recently, we released flow-1, a model trained with RL to find errors in agent traces. On our benchmark it matches GPT-6-sol in detection quality while being 23x Flow-1 reads full agent traces and points at the step where the agent went wrong. The authors say it matches GPT-6-sol in detection quality while being 23x cheaper. The observability platform is open source."
+ },
+ "expect": {
+  "status": "ok",
+  "required_terms": [
+   "flow-1",
+   "23x"
+  ],
+  "forbidden_terms": [
+   "open-weights",
+   "acquired"
+  ],
+  "min_coverage": 1.0,
+  "injection_flag": false
+ },
+ "recorded": {
+  "kind": "reference",
+  "note": "Reference answer written by hand from the source text (not a model output).",
+  "response": {
+   "status": "ok",
+   "title": "Launch HN: Laminar (YC S24) – RL-trained model that finds errors in agent traces",
+   "one_line": "Laminar released flow-1, a model trained with RL to find errors in agent traces; the authors say it matches GPT-6-sol while being 23x cheaper.",
+   "key_points": [
+    "The authors say flow-1 matches GPT-6-sol in detection quality while being 23x cheaper.",
+    "Flow-1 reads full agent traces and points at the step where the agent went wrong.",
+    "Laminar's observability platform for AI agents is open source."
+   ],
+   "why_it_matters": "",
+   "tags": [
+    "agents-tooling",
+    "evals-benchmarks"
+   ],
+   "entities": [
+    "Laminar",
+    "flow-1",
+    "GPT-6-sol"
+   ],
+   "notable_figures": [
+    {
+     "value": "23x",
+     "context": "cost advantage over GPT-6-sol claimed by the authors"
+    }
+   ],
+   "source_url": "https://news.ycombinator.com/item?id=50154029",
+   "injection_flag": false
+  }
+ }
+}

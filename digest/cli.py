@@ -16,6 +16,7 @@ from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import yaml
@@ -325,6 +326,23 @@ def _last_run(
 # ---- notify-failure -------------------------------------------------------------------
 
 
+MAX_RUN_URL = 300
+
+
+def safe_run_url(url: str, env: Mapping[str, str]) -> str:
+    """The run link in a failure notice: https only, no credentials, no whitespace or control
+    characters, at most 300 characters, and the host must be the repository host
+    (GITHUB_SERVER_URL, default github.com). Anything else is dropped: the notice then has no
+    link, never a hostile one."""
+    if not url or len(url) > MAX_RUN_URL or re.search(r"[\s\x00-\x1f\x7f]", url):
+        return ""
+    parts = urlsplit(url)
+    if parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
+        return ""
+    server = urlsplit(env.get("GITHUB_SERVER_URL", "") or "https://github.com").hostname
+    return url if parts.hostname.lower() == (server or "github.com").lower() else ""
+
+
 def _notify(
     args: argparse.Namespace, env: Mapping[str, str], now: datetime, smtp_factory: SmtpFactory
 ) -> int:
@@ -333,7 +351,7 @@ def _notify(
     except DeliveryConfigError as exc:
         print(f"no failure notice sent: {exc}")
         return EXIT_OK
-    url = args.run_url if re.fullmatch(r"https?://\S+", args.run_url or "") else ""
+    url = safe_run_url(args.run_url or "", env)
     lines = ["Your Axon digest run failed."]
     if url:
         lines.append(f"Details: {url}")
