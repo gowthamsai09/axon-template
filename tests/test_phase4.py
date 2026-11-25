@@ -264,7 +264,7 @@ def test_dry_run_owner_channel_writes_to_the_outbox_instead(tmp_path: Path) -> N
 
 def test_unsupported_channel_is_a_warning_not_a_lost_run(tmp_path: Path) -> None:
     data = yaml.safe_load(_profile(tmp_path, flag=True).read_text(encoding="utf-8"))
-    data["delivery"]["channel"] = "slack"
+    data["delivery"]["channel"] = "telegram"  # ENV has no bot token: delivery cannot work
     (tmp_path / "profile.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
     sent: list[EmailMessage] = []
     code = main(

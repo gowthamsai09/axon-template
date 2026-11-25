@@ -169,7 +169,7 @@ def test_deepseek_adapter_v4_disables_thinking() -> None:
 
 
 def test_deepseek_legacy_model_warning() -> None:
-    assert "deepseek-v4-flash" in (deprecation_warning("deepseek-chat") or "")
+    assert "deepseek-flash" in (deprecation_warning("deepseek-chat") or "")
     assert deprecation_warning("deepseek-reasoner") is not None
     assert deprecation_warning("deepseek-v4-pro") is None
 

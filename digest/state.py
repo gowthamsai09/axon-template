@@ -1,5 +1,6 @@
 """The state branch on disk (spec 6.5): seen.json, summaries/<cachekey>.json, tasks/<id>.json,
-last_run.json. Writes are atomic; corrupt files are ignored with a warning, never fatal."""
+last_run.json, plus the Phase 6 files: embeddings/<key>.json, delivered.json, weights.json and
+rss/. Writes are atomic; corrupt files are ignored with a warning, never fatal."""
 
 from __future__ import annotations
 
@@ -11,12 +12,13 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from .summarizers.base import Summary
 from .task_result import UUID_PATTERN
 
-SEEN_DAYS, SUMMARY_DAYS, TASK_DAYS = 30, 30, 7
+SEEN_DAYS, SUMMARY_DAYS, TASK_DAYS, EMBED_DAYS, DELIVERED_DAYS = 30, 30, 7, 7, 30
+MAX_DELIVERED_TAGS = 16
 CACHE_KEY = re.compile(r"^[a-f0-9]{64}$")
 
 
@@ -38,6 +40,17 @@ class CachedSummary(BaseModel):
     provider: str
     model: str
     summary: Summary
+
+
+class CachedVector(BaseModel):
+    """One cached embedding: unit vector packed as base64 little-endian float16."""
+
+    model_config = ConfigDict(extra="forbid")
+    cached_at: AwareDatetime
+    provider: str
+    model: str
+    dim: int = Field(ge=1, le=4096)
+    v: str = Field(max_length=40_000)
 
 
 class StateStore:
@@ -62,6 +75,21 @@ class StateStore:
         except (ValueError, OSError):
             self.warnings.append(f"state/{rel}: unreadable, ignored")
             return None
+
+    def read_json(self, rel: str) -> Any | None:
+        """A state file as parsed JSON, or None (missing or unreadable, with a warning)."""
+        return self._read(rel)
+
+    def write_json(self, rel: str, data: Any) -> None:
+        self._write(rel, data)
+
+    def write_text(self, rel: str, text: str) -> None:
+        """Atomic UTF-8 text write (the Atom feed)."""
+        path = self.root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(text, encoding="utf-8", newline="\n")
+        os.replace(tmp, path)
 
     # -- seen -----------------------------------------------------------------------
     def seen(self) -> dict[str, datetime]:
@@ -104,6 +132,51 @@ class StateStore:
         entry = CachedSummary(cached_at=now, provider=provider, model=model, summary=summary)
         self._write(f"summaries/{key}.json", json.loads(entry.model_dump_json()))
 
+    # -- embeddings cache -----------------------------------------------------------
+    def get_vector(self, key: str) -> CachedVector | None:
+        if not CACHE_KEY.match(key):
+            return None
+        raw = self._read(f"embeddings/{key}.json")
+        if raw is None:
+            return None
+        try:
+            return CachedVector.model_validate(raw)
+        except ValidationError:
+            self.warnings.append(f"state/embeddings/{key}.json: invalid, ignored")
+            return None
+
+    def put_vector(self, key: str, entry: CachedVector) -> None:
+        if not CACHE_KEY.match(key):
+            raise ValueError("bad cache key")
+        self._write(f"embeddings/{key}.json", json.loads(entry.model_dump_json()))
+
+    # -- delivered items (feedback votes map an item id to its topics) ----------------
+    def delivered(self) -> dict[str, list[str]]:
+        raw = self._read("delivered.json")
+        out: dict[str, list[str]] = {}
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                tags = value.get("tags") if isinstance(value, dict) else None
+                if isinstance(tags, list):
+                    out[str(key)] = [t for t in tags if isinstance(t, str)][:MAX_DELIVERED_TAGS]
+        return out
+
+    def record_delivered(self, tags_by_id: dict[str, list[str]], now: datetime) -> None:
+        raw = self._read("delivered.json")
+        kept: dict[str, Any] = {}
+        cutoff = now - timedelta(days=DELIVERED_DAYS)
+        if isinstance(raw, dict):
+            for key, value in raw.items():
+                try:
+                    at = datetime.fromisoformat(str(value["at"]).replace("Z", "+00:00"))
+                except (ValueError, KeyError, TypeError):
+                    continue
+                if at >= cutoff:
+                    kept[str(key)] = value
+        for item_id, tags in tags_by_id.items():
+            kept[item_id] = {"tags": tags[:MAX_DELIVERED_TAGS], "at": now.isoformat()}
+        self._write("delivered.json", kept)
+
     # -- tasks (Tier 3) ---------------------------------------------------------------
     def task_path(self, task_id: str) -> str:
         if not re.fullmatch(UUID_PATTERN, task_id):
@@ -132,10 +205,14 @@ class StateStore:
 
     def prune(self, now: datetime) -> int:
         removed = 0
-        for sub, days in (("summaries", SUMMARY_DAYS), ("tasks", TASK_DAYS)):
+        for sub, days in (
+            ("summaries", SUMMARY_DAYS),
+            ("tasks", TASK_DAYS),
+            ("embeddings", EMBED_DAYS),
+        ):
             folder = self.root / sub
             for path in folder.glob("*.json") if folder.is_dir() else []:
-                stamp = "cached_at" if sub == "summaries" else "finished_at"
+                stamp = "finished_at" if sub == "tasks" else "cached_at"
                 try:
                     raw = json.loads(path.read_text(encoding="utf-8"))[stamp]
                     when = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))

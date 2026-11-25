@@ -19,10 +19,24 @@ delivery:
   language: en
 summarizer:
   provider: deepseek        # deepseek | huggingface | openai_compatible
-  model: deepseek-v4-flash  # deepseek-chat / deepseek-reasoner were retired 2026-07-24
+  model: deepseek-flash     # deepseek-v4-flash still works (served by it); chat/reasoner retired
   fallback_provider: ""     # set fallback_provider AND fallback_model together, or leave both empty
   fallback_model: ""
   base_url: ""              # only for openai_compatible; must be https
+embeddings:                 # optional: also match items by meaning (needs the EMBED_API_KEY secret)
+  enabled: false
+  provider: huggingface     # huggingface | openai_compatible (DeepSeek has no embeddings)
+  model: ""                 # e.g. thenlper/gte-large (huggingface); required when enabled
+  base_url: ""              # only for openai_compatible; must be https, no query
+  weight: 0.25              # how much similarity adds to the score (0 to 1)
+  min_similarity: 0.35      # cosine below this counts as no match
+  max_items: 50             # at most this many candidates are compared per run (cost cap)
+trends:                     # optional: a Trends section in WEEKLY digests
+  enabled: false
+  llm_labels: false         # true adds a one-line AI label per trend (uses your summarizer key)
+  max_clusters: 5
+feedback:                   # optional: thumbs up/down links adjust your topic weights
+  enabled: false
 agent_access:
   allow_inbound_agents: true
   allowed_modes: [data, summary, digest]   # digest = Tier 3

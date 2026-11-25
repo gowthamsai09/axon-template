@@ -23,6 +23,21 @@ NOTICE: {{ n }}
    [{{ it.note }}]
 {% endif %}
 {% endfor %}
+{% if v.trends %}
+
+Trends this week
+{% for t in v.trends %}
+
+* {{ t.label }}: {{ t.line }}
+{% if t.blurb %}
+  {{ t.blurb }} (AI label: {{ t.model }})
+{% endif %}
+{% for h in t.headlines %}
+  - {{ h.title }}{% if h.url %} | {{ h.url }}{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% endif %}
 
 --
 {{ v.model_line }}

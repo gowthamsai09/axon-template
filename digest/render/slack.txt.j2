@@ -1,0 +1,38 @@
+*{{ v.heading | sl }}* - {{ v.date | sl }}
+{% for n in v.notices %}
+
+:warning: {{ n | sl }}
+{% endfor %}
+{% for it in v.items %}
+
+{{ loop.index }}. {% if it.url %}<{{ it.url | slurl }}|{{ it.title | sllabel }}>{% else %}{{ it.title | sl }}{% endif %}
+
+{% if it.ai %}
+{{ it.one_line | sl }}
+{% for p in it.key_points %}
+• {{ p | sl }}
+{% endfor %}
+{% else %}
+{{ it.snippet | sl }}
+{% endif %}
+{% if it.note %}
+_{{ it.note | sl }}_
+{% endif %}
+{% endfor %}
+{% if v.trends %}
+
+*Trends this week*
+{% for t in v.trends %}
+
+• *{{ t.label | sl }}*: {{ t.line | sl }}
+{% if t.blurb %}
+{{ t.blurb | sl }} (AI label: {{ t.model | sl }})
+{% endif %}
+{% for h in t.headlines %}
+  - {% if h.url %}<{{ h.url | slurl }}|{{ h.title | sllabel }}>{% else %}{{ h.title | sl }}{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% endif %}
+
+_{{ v.model_line | sl }}_

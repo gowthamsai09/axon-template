@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+from .embeddings.base import Embedder, EmbeddingError
+from .embeddings.matcher import semantic_scores
 from .extract import TextEnricher
-from .feed_client import FeedItem, FeedReader, fetch_extra_rss, load_feed
+from .feed_client import FeedError, FeedItem, FeedReader, fetch_extra_rss, load_feed
 from .profile import Profile
 from .rank import rank
 from .safe_http import SafeFetcher
@@ -15,6 +18,7 @@ from .state import StateStore, cache_key, content_hash
 from .summarizers.base import SourceItem, Summary, Usage
 from .summarizers.prompting import document_for, prompt_version
 from .summarizers.router import SummarizerRouter
+from .trends import Trend, collect_trends
 
 STALE_FEED_HOURS = 30
 _NO_PREVIEW = "(no preview available)"
@@ -40,6 +44,9 @@ class DigestRun:
     usage: Usage = field(default_factory=Usage)
     cache_hits: int = 0
     candidates: int = 0
+    trends: list[Trend] = field(default_factory=list)
+    embedded: int = 0  # texts sent to the embeddings provider this run
+    embed_cache_hits: int = 0
 
 
 def extractive_snippet(item: FeedItem, text: str) -> str:
@@ -58,6 +65,9 @@ def run_digest(
     now: datetime,
     max_items: int | None = None,
     use_seen: bool = True,
+    embedder: Embedder | None = None,
+    weights: Mapping[str, float] | None = None,
+    with_trends: bool = True,
 ) -> DigestRun:
     run = DigestRun()
     items: list[FeedItem] = []
@@ -80,7 +90,9 @@ def run_digest(
     run.candidates = len(items)
     limit = max_items or profile.delivery.max_items
     seen = set(state.seen()) if use_seen else set()
-    top = rank(items, profile, seen=seen, limit=limit)
+    semantic = _semantic(run, profile, items, seen, embedder, state, now)
+    votes = weights if profile.feedback.enabled else None
+    top = rank(items, profile, seen=seen, limit=limit, semantic=semantic, weights=votes)
     depth, language = profile.delivery.depth, profile.delivery.language
     version = prompt_version()
     for scored in top:
@@ -126,9 +138,62 @@ def run_digest(
                 )  # fmt: skip
         _apply(entry, result_summary, fallback, run)
         run.entries.append(entry)
+    if with_trends and profile.trends.enabled and profile.delivery.frequency == "weekly":
+        _trends(run, profile, reader, state, now, router, embedder)
     run.notices.extend(router.notices if router is not None else [])
     run.warnings.extend(state.warnings)
     return run
+
+
+def _semantic(
+    run: DigestRun,
+    profile: Profile,
+    items: list[FeedItem],
+    seen: set[str],
+    embedder: Embedder | None,
+    state: StateStore,
+    now: datetime,
+) -> dict[str, float] | None:
+    """Semantic scores, or None (keyword matching only) with a warning on any failure."""
+    if embedder is None or not profile.embeddings.enabled:
+        return None
+    pool = [i for i in items if i.id not in seen]
+    try:
+        result = semantic_scores(pool, profile.interests, profile.embeddings, embedder, state, now)
+    except EmbeddingError as exc:
+        run.warnings.append(f"semantic matching skipped, keywords only: {exc}")
+        return None
+    except Exception as exc:  # an optional extra must never cost the user their digest
+        name = type(exc).__name__
+        run.warnings.append(f"semantic matching skipped, keywords only ({name})")
+        return None
+    run.warnings.extend(result.warnings)
+    run.embedded, run.embed_cache_hits = result.embedded, result.cached
+    return result.scores
+
+
+def _trends(
+    run: DigestRun,
+    profile: Profile,
+    reader: FeedReader | None,
+    state: StateStore,
+    now: datetime,
+    router: SummarizerRouter | None,
+    embedder: Embedder | None,
+) -> None:
+    """Fill run.trends for a weekly digest. Any failure is a warning, never a failed run."""
+    try:
+        run.trends, extra = collect_trends(
+            profile, reader, state, now, router=router,
+            embedder=embedder if profile.embeddings.enabled else None, usage=run.usage,
+        )  # fmt: skip
+    except FeedError as exc:
+        run.warnings.append(f"trends skipped: {exc}")
+        return
+    except Exception as exc:
+        run.warnings.append(f"trends skipped ({type(exc).__name__})")
+        return
+    run.warnings.extend(extra)
 
 
 def _apply(entry: DigestEntry, summary: Summary | None, fallback: str, run: DigestRun) -> None:

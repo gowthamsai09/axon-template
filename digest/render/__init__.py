@@ -1,7 +1,9 @@
-"""Render a digest (spec 6.3 step 8): HTML plus plain text for email, MarkdownV2 for Telegram.
+"""Render a digest (spec 6.3 step 8): HTML plus plain text for email, MarkdownV2 for Telegram,
+mrkdwn for Slack.
 
 Everything from the feed or the model is untrusted text: HTML is autoescaped, links are limited
-to http(s), Telegram text is escaped for MarkdownV2."""
+to http(s) without whitespace, Telegram text is escaped for MarkdownV2, and Slack text has its
+control characters (& < >) escaped so no mention, channel or link markup can be formed."""
 
 from __future__ import annotations
 
@@ -16,9 +18,12 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from ..pipeline import DigestEntry, DigestRun
 from ..profile import Profile
+from ..trends import Trend
 
 TEMPLATES = Path(__file__).resolve().parent
 _MD_V2 = re.compile(r"([_*\[\]()~`>#+\-=|{}.!\\])")
+_SLACK_LOOKALIKE = str.maketrans({"*": "\u2217", "~": "\u223c", "`": "'"})
+_URL_UNSAFE = re.compile(r"[\x00-\x20\x7f<>|]")
 
 
 @dataclass
@@ -38,6 +43,21 @@ class ItemView:
 
 
 @dataclass
+class HeadlineView:
+    title: str
+    url: str
+
+
+@dataclass
+class TrendView:
+    label: str
+    line: str
+    headlines: list[HeadlineView]
+    blurb: str = ""
+    model: str = ""
+
+
+@dataclass
 class DigestView:
     heading: str
     date: str
@@ -47,9 +67,12 @@ class DigestView:
     model_line: str
     usage_line: str
     extra: dict[str, str] = field(default_factory=dict)
+    trends: list[TrendView] = field(default_factory=list)
 
 
 def http_url(url: str) -> str:
+    if re.search(r"[\s\x00-\x1f\x7f]", url):
+        return ""  # a link never carries whitespace or control characters
     parts = urlsplit(url)
     return url if parts.scheme in {"http", "https"} and parts.hostname else ""
 
@@ -80,6 +103,16 @@ def _item_view(entry: DigestEntry, zone: ZoneInfo, repo_url: str) -> ItemView:
     )
 
 
+def _trend_view(trend: Trend) -> TrendView:
+    return TrendView(
+        label=trend.label,
+        line=f"{trend.stories} stories this week, {trend.recent} in the last 3 days",
+        headlines=[HeadlineView(h.title, http_url(h.url)) for h in trend.headlines],
+        blurb=trend.blurb,
+        model=trend.model,
+    )
+
+
 def build_view(run: DigestRun, profile: Profile, now: datetime, repo_url: str = "") -> DigestView:
     zone = ZoneInfo(profile.delivery.timezone)
     models = sorted({f"{e.provider}/{e.model}" for e in run.entries if e.summary is not None})
@@ -95,11 +128,30 @@ def build_view(run: DigestRun, profile: Profile, now: datetime, repo_url: str = 
             f"Tokens: {run.usage.prompt_tokens} in, {run.usage.completion_tokens} out "
             f"({run.usage.calls} calls, {run.cache_hits} cached)."
         ),
+        trends=[_trend_view(t) for t in run.trends],
     )  # fmt: skip
 
 
 def _md_v2(value: str) -> str:
     return _MD_V2.sub(r"\\\1", value)
+
+
+def _slack_text(value: str) -> str:
+    """Untrusted text for Slack: one line, & < > escaped, * ~ ` swapped for look-alikes."""
+    flat = " ".join(value.split())
+    escaped = flat.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return escaped.translate(_SLACK_LOOKALIKE)
+
+
+def _slack_label(value: str) -> str:
+    """Link text: like _slack_text, and a pipe would end the label early, so it is swapped."""
+    return _slack_text(value).replace("|", "\u00a6")
+
+
+def _slack_url(value: str) -> str:
+    """A link target: spaces, controls and < > | are percent-encoded, & is escaped."""
+    safe = _URL_UNSAFE.sub(lambda m: f"%{ord(m.group(0)):02X}", value)
+    return safe.replace("&", "&amp;")
 
 
 def _env() -> Environment:
@@ -112,6 +164,9 @@ def _env() -> Environment:
         keep_trailing_newline=True,
     )
     env.filters["tg"] = _md_v2
+    env.filters["sl"] = _slack_text
+    env.filters["sllabel"] = _slack_label
+    env.filters["slurl"] = _slack_url
     return env
 
 
@@ -125,3 +180,7 @@ def render_email(view: DigestView) -> tuple[str, str, str]:
 
 def render_telegram(view: DigestView) -> str:
     return _env().get_template("telegram.md.j2").render(v=view)
+
+
+def render_slack(view: DigestView) -> str:
+    return _env().get_template("slack.txt.j2").render(v=view)

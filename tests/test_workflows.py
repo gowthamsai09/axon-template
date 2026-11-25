@@ -24,10 +24,11 @@ REAL = {
     "issue-token.yml",
     "revoke-token.yml",
     "keepalive.yml",
+    "onboard.yml",
 }  # everything else is still a stub (TODO markers required)
 SECRETS_OK = {
     "LLM_API_KEY", "LLM_API_KEY_FALLBACK", "SMTP_USER", "SMTP_PASS", "MAIL_TO",
-    "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "SLACK_WEBHOOK_URL", "GITHUB_TOKEN",
+    "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "SLACK_WEBHOOK_URL", "GITHUB_TOKEN", "EMBED_API_KEY",
 }  # fmt: skip
 UNTRUSTED = re.compile(r"\$\{\{\s*(inputs\.|github\.event|github\.head_ref|vars\.)")
 
@@ -91,7 +92,7 @@ def test_digest_keeps_task_inputs_and_run_name() -> None:
     inputs = doc[True]["workflow_dispatch"]["inputs"]
     assert set(inputs) == {"task_id", "params"}
     assert "digest task" in doc["run-name"] and doc["concurrency"]["group"] == "digest"
-    assert doc["permissions"] == {"contents": "write"}
+    assert doc["permissions"] == {"contents": "write", "issues": "write"}
 
 
 def test_digest_passes_untrusted_input_through_env_only() -> None:

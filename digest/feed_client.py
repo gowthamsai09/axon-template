@@ -11,7 +11,7 @@ import json
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from time import struct_time
 from typing import Any, Protocol
@@ -21,7 +21,7 @@ import feedparser
 import httpx
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
-from .profile import Interests
+from .profile import TOPIC_SLUGS, Interests
 from .safe_http import FetchError, SafeFetcher
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -178,6 +178,33 @@ def load_feed(reader: FeedReader, interests: Interests) -> FeedSnapshot:
                 snap.items.append(item)
     if not read_any:
         raise FeedError("no feed files found (is FEED_BASE correct and the feed published?)")
+    return snap
+
+
+WEEK_DAYS = 7
+
+
+def load_week(reader: FeedReader, now: datetime, *, days: int = WEEK_DAYS) -> FeedSnapshot:
+    """Every topic shard plus latest.json, keeping items from the last `days` days (trends).
+
+    The shared feed keeps a 168-hour window in each tag shard, so no feed change is needed.
+    A missing shard is normal; if none can be read at all the caller gets a FeedError."""
+    snap = FeedSnapshot()
+    cutoff, horizon = now - timedelta(days=days), now + timedelta(days=1)
+    seen: set[str] = set()
+    read_any = False
+    for rel in [*(f"tags/{t}.json" for t in TOPIC_SLUGS), "latest.json"]:
+        raw = reader.read_bytes(rel)
+        if raw is None:
+            continue
+        read_any = True
+        for item in _parse_shard(raw, rel, snap.warnings):
+            if item.id in seen or not cutoff <= item.published_at <= horizon:
+                continue
+            seen.add(item.id)
+            snap.items.append(item)
+    if not read_any:
+        raise FeedError("no feed files found for the weekly trends")
     return snap
 
 

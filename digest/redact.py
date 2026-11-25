@@ -7,6 +7,7 @@ from collections.abc import Iterable, Mapping
 SECRET_ENV_NAMES = (
     "LLM_API_KEY",
     "LLM_API_KEY_FALLBACK",
+    "EMBED_API_KEY",
     "SMTP_PASS",
     "SMTP_USER",
     "MAIL_TO",

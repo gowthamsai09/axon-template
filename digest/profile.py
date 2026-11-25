@@ -35,6 +35,7 @@ TOPIC_SLUGS: tuple[str, ...] = get_args(TopicSlug)
 
 Provider = Literal["deepseek", "huggingface", "openai_compatible"]
 FallbackProvider = Literal["", "deepseek", "huggingface"]  # openai_compatible: see Spec deltas
+EmbeddingProvider = Literal["huggingface", "openai_compatible"]  # DeepSeek has no embeddings
 Channel = Literal["email", "telegram", "slack", "rss"]
 Frequency = Literal["daily", "weekly"]
 Depth = Literal["headlines", "brief", "detailed"]
@@ -44,6 +45,9 @@ Weekday = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 Term = Annotated[str, Field(min_length=1, max_length=64)]
 _GITHUB_ENTITY = re.compile(r"^github:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _CTRL = re.compile(r"[\x00-\x1f\x7f]")
+# A Hugging Face model id goes into a URL path: org/name or name, letters, digits, . _ - only.
+HF_MODEL = re.compile(r"^(?:[A-Za-z0-9][A-Za-z0-9._-]{0,63}/)?[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+_PLAIN_MODEL = re.compile(r"^[A-Za-z0-9._:/-]{1,100}$")
 
 
 class Strict(BaseModel):
@@ -185,12 +189,77 @@ class AgentAccess(Strict):
         return _unique(v, "modes")
 
 
+class Embeddings(Strict):
+    """Optional semantic matching (Phase 6, Appendix C 96). Off by default. The key is the
+    EMBED_API_KEY secret, never part of this file. DeepSeek has no embeddings endpoint."""
+
+    enabled: bool = False
+    provider: EmbeddingProvider = "huggingface"
+    model: str = Field("", max_length=100)
+    base_url: str = Field("", max_length=2048)
+    weight: float = Field(0.25, ge=0.0, le=1.0)
+    min_similarity: float = Field(0.35, ge=0.0, lt=1.0)
+    max_items: int = Field(50, ge=1, le=200)
+
+    @model_validator(mode="after")
+    def _rules(self) -> Self:
+        if self.provider == "openai_compatible":
+            if not self.base_url:
+                raise ValueError("base_url is required for openai_compatible embeddings")
+            parts = urlsplit(self.base_url)
+            if parts.scheme != "https" or not parts.hostname:
+                raise ValueError("embeddings base_url must start with https://")
+            if parts.username or parts.password:
+                raise ValueError("embeddings base_url must not contain credentials")
+            if parts.query or parts.fragment:
+                raise ValueError("embeddings base_url must have no query or fragment")
+        elif self.base_url:
+            raise ValueError("base_url is only allowed for openai_compatible embeddings")
+        if self.enabled and not self.model:
+            raise ValueError("model is required when embeddings are enabled")
+        if self.model:
+            if self.provider == "huggingface":
+                ok = HF_MODEL.fullmatch(self.model) is not None
+            else:
+                ok = (
+                    _PLAIN_MODEL.fullmatch(self.model) is not None
+                    and ".." not in self.model
+                    and "//" not in self.model
+                )
+            if not ok:
+                raise ValueError("embeddings model has characters that are not allowed")
+        return self
+
+
+class Trends(Strict):
+    """Weekly trends section (Phase 6, Appendix C 97): deterministic; labels are opt-in."""
+
+    enabled: bool = False
+    llm_labels: bool = False
+    max_clusters: int = Field(5, ge=1, le=10)
+
+    @model_validator(mode="after")
+    def _labels(self) -> Self:
+        if self.llm_labels and not self.enabled:
+            raise ValueError("llm_labels needs trends.enabled")
+        return self
+
+
+class Feedback(Strict):
+    """Feedback votes nudge per-topic weights (spec 6.9, Phase 6, Appendix C 98)."""
+
+    enabled: bool = False
+
+
 class Profile(Strict):
     version: Literal[1]
     interests: Interests
     sources: Sources
     delivery: Delivery
     summarizer: Summarizer
+    embeddings: Embeddings = Field(default_factory=Embeddings)
+    trends: Trends = Field(default_factory=Trends)
+    feedback: Feedback = Field(default_factory=Feedback)
     agent_access: AgentAccess
 
 

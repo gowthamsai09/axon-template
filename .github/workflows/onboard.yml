@@ -1,20 +1,81 @@
-# STUB (Phase 2). Parses the onboarding issue form into profile.yaml (spec 6.8).
+# Onboarding (spec 6.8, Appendix C 101). The owner fills in the Issue form; this workflow checks
+# it with the real profile model, commits profile.yaml and replies with the cron line to paste.
+# The Issue body is untrusted text: it reaches code through env: only and is never echoed.
+# Personal-account repositories only: the author must be the repository owner.
 name: onboard
 on:
   issues:
     types: [opened, edited]
 permissions:
-  contents: read   # TODO(Phase 2): contents: write (commit profile.yaml) and issues: write
-  issues: read
+  contents: write   # commits profile.yaml to the default branch (never workflow files)
+  issues: write     # replies on, and closes, the onboarding Issue
+concurrency:
+  group: onboard
+  cancel-in-progress: false
 jobs:
   onboard:
-    if: "github.repository != 'gowthamsai09/axon-template'"
+    if: >-
+      github.repository != 'gowthamsai09/axon-template' &&
+      github.event.issue.state == 'open' &&
+      github.event.issue.user.type == 'User' &&
+      github.event.issue.user.login == github.repository_owner &&
+      github.event.sender.login == github.repository_owner &&
+      contains(github.event.issue.labels.*.name, 'onboarding')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Parse and validate the issue form
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
+      - name: Check the form and write profile.yaml
+        id: check
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}   # untrusted: env only
-        run: echo "TODO(Phase 2) restrict to the repo owner, parse ISSUE_BODY, validate with digest.profile"
-      - name: Commit profile.yaml and generate the UTC cron
-        run: echo "TODO(Phase 2) write profile.yaml and update the cron line (spec 6.8)"
+        run: |
+          set -uo pipefail
+          if python -m digest.cli onboard --comment-file "$RUNNER_TEMP/comment.md"; then
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+          fi
+          if [ ! -s "$RUNNER_TEMP/comment.md" ]; then
+            echo "Axon onboarding: the form could not be processed. Nothing was changed." \
+              > "$RUNNER_TEMP/comment.md"
+          fi
+      - name: Commit profile.yaml
+        if: steps.check.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          git config user.name "onboard-bot"
+          git config user.email "onboard-bot@users.noreply.github.com"
+          git add profile.yaml
+          if git diff --cached --quiet; then
+            echo "profile.yaml is unchanged"
+            exit 0
+          fi
+          git commit -q -m "Onboarding: update profile.yaml"
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$AUTH"
+          git -c "http.extraheader=Authorization: basic $AUTH" push -q origin "HEAD:refs/heads/$BRANCH"
+      - name: Reply on the Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          VALID: ${{ steps.check.outputs.valid }}
+        run: |
+          set -euo pipefail
+          case "$ISSUE_NUMBER" in ''|*[!0-9]*) echo "bad issue number" >&2; exit 1 ;; esac
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+          if [ "$VALID" = "true" ]; then
+            gh issue close "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY"
+          fi

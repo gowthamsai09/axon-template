@@ -159,8 +159,8 @@ def test_delivery_failure_exits_1_and_keeps_items_unseen(
     assert last["status"] == "failed"
 
 
-def test_unimplemented_channel_is_a_config_error(tmp_path: Path) -> None:
-    profile = write_profile(tmp_path, delivery={"channel": "slack"})
+def test_a_chat_channel_without_its_secrets_is_a_config_error(tmp_path: Path) -> None:
+    profile = write_profile(tmp_path, delivery={"channel": "telegram"})  # ENV has no bot token
     assert run_cli(tmp_path, World(), profile=profile) == 2 and seen(tmp_path) == set()
 
 
@@ -293,10 +293,11 @@ def test_init_writes_a_valid_profile_and_prints_the_cron(
         "email", "weekly", "mon", "07:30", "Asia/Kolkata", "detailed", "8", "en",  # delivery
         "deepseek", "", "",                                                  # summarizer
         "n", "data", "3", "n",                                                    # agent access
+        "n",                                                                 # optional extras
     )  # fmt: skip
     assert main(["init", "--out", str(out)], now=NOW, ask=ask) == 0
     profile: Profile = load_profile(out)
-    assert profile.delivery.weekday == "mon" and profile.summarizer.model == "deepseek-v4-flash"
+    assert profile.delivery.weekday == "mon" and profile.summarizer.model == "deepseek-flash"
     assert (
         profile.agent_access.allow_inbound_agents is False
         and profile.agent_access.allowed_modes == ["data"]
@@ -314,6 +315,7 @@ def test_init_reasks_an_invalid_section_and_protects_existing_files(tmp_path: Pa
         "", "", "", "", "", "", "",    # delivery again, all defaults
         "", "", "",                    # summarizer defaults
         "", "", "", "",                    # agent access defaults
+        "",                            # optional extras: default is no
     )  # fmt: skip
     assert main(["init", "--out", str(out)], now=NOW, ask=ask) == 0
     assert load_profile(out).interests.topics == ["rag"]

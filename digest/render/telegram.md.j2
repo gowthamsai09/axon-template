@@ -19,5 +19,20 @@
 _{{ it.note | tg }}_
 {% endif %}
 {% endfor %}
+{% if v.trends %}
+
+*Trends this week*
+{% for t in v.trends %}
+
+• *{{ t.label | tg }}*: {{ t.line | tg }}
+{% if t.blurb %}
+{{ t.blurb | tg }} \(AI label: {{ t.model | tg }}\)
+{% endif %}
+{% for h in t.headlines %}
+  \- {% if h.url %}[{{ h.title | tg }}]({{ h.url | replace('\\', '%5C') | replace(')', '%29') }}){% else %}{{ h.title | tg }}{% endif %}
+
+{% endfor %}
+{% endfor %}
+{% endif %}
 
 _{{ v.model_line | tg }}_

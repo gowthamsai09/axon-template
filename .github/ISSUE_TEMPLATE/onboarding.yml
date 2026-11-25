@@ -1,14 +1,202 @@
-name: Onboarding (stub)
-description: Placeholder; the real form arrives in Phase 2 (spec 6.8).
-title: "Onboarding: "
+name: Onboarding
+description: Set up your digest. The answers become profile.yaml (spec 6.8).
+title: "Onboarding: my digest"
 labels: ["onboarding"]
 body:
   - type: markdown
     attributes:
-      value: "TODO(Phase 2): fields that map to profile.yaml. Never enter API keys here."
-  - type: textarea
-    id: notes
+      value: |
+        Fill this in as the repository owner. Never enter API keys, tokens or passwords here;
+        add them later under Settings > Secrets. Saving an edit re-runs the check.
+  - type: checkboxes
+    id: topics
     attributes:
-      label: Notes
+      label: Topics
+      description: Pick the areas you care about.
+      options:
+        - label: llm-releases
+        - label: open-source-llms
+        - label: small-local-models
+        - label: multimodal
+        - label: agents-tooling
+        - label: rag
+        - label: fine-tuning-training
+        - label: research-papers
+        - label: mlops-infra
+        - label: ai-hardware
+        - label: evals-benchmarks
+        - label: safety-alignment
+        - label: ai-policy-regulation
+        - label: ai-products-apps
+        - label: datasets
+        - label: robotics
+  - type: textarea
+    id: entities
+    attributes:
+      label: Companies, models or repos to follow
+      description: One per line, for example Qwen or github:ollama/ollama.
     validations:
       required: false
+  - type: textarea
+    id: include
+    attributes:
+      label: Keywords to include
+      description: One per line.
+    validations:
+      required: false
+  - type: textarea
+    id: exclude
+    attributes:
+      label: Keywords to exclude
+      description: One per line.
+    validations:
+      required: false
+  - type: textarea
+    id: rss
+    attributes:
+      label: Extra RSS feeds
+      description: One https URL per line. Optional.
+    validations:
+      required: false
+  - type: dropdown
+    id: channel
+    attributes:
+      label: Delivery channel
+      options:
+        - email
+        - telegram
+        - slack
+        - rss
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      options:
+        - daily
+        - weekly
+    validations:
+      required: true
+  - type: dropdown
+    id: weekday
+    attributes:
+      label: Weekday (weekly only)
+      description: Only for weekly digests.
+      options:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+        - sat
+        - sun
+    validations:
+      required: false
+  - type: input
+    id: time
+    attributes:
+      label: Send time (24h, local)
+      description: HH:MM, for example 07:30.
+      placeholder: "07:30"
+    validations:
+      required: true
+  - type: input
+    id: zone
+    attributes:
+      label: Timezone (IANA name)
+      description: For example Asia/Kolkata or Europe/Berlin.
+      placeholder: "Asia/Kolkata"
+    validations:
+      required: true
+  - type: dropdown
+    id: depth
+    attributes:
+      label: Depth
+      options:
+        - headlines
+        - brief
+        - detailed
+    validations:
+      required: true
+  - type: input
+    id: max
+    attributes:
+      label: Maximum items per digest
+      description: A number from 1 to 25.
+      placeholder: "10"
+    validations:
+      required: true
+  - type: input
+    id: lang
+    attributes:
+      label: Language code
+      description: For example en or de.
+      placeholder: "en"
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Summarizer provider
+      options:
+        - deepseek
+        - huggingface
+        - openai_compatible
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Summarizer model
+      description: Leave empty for the default model of the provider.
+    validations:
+      required: false
+  - type: input
+    id: base
+    attributes:
+      label: Summarizer base URL (openai_compatible only)
+      description: https URL. Leave empty for other providers.
+    validations:
+      required: false
+  - type: checkboxes
+    id: extras
+    attributes:
+      label: Optional extras
+      description: All off by default.
+      options:
+        - label: Semantic matching (embeddings)
+        - label: Weekly trends section
+        - label: Thumbs up/down feedback links
+  - type: dropdown
+    id: eprovider
+    attributes:
+      label: Embeddings provider
+      description: Only if you picked semantic matching.
+      options:
+        - huggingface
+        - openai_compatible
+    validations:
+      required: false
+  - type: input
+    id: emodel
+    attributes:
+      label: Embeddings model
+      description: Leave empty for the suggested model.
+    validations:
+      required: false
+  - type: input
+    id: ebase
+    attributes:
+      label: Embeddings base URL (openai_compatible only)
+      description: https URL. Leave empty for huggingface.
+    validations:
+      required: false
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Secrets
+      description: Required.
+      options:
+        - label: I will not put API keys, tokens or passwords in this form
+          required: true

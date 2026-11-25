@@ -13,7 +13,7 @@ ALLOWED = frozenset(
     {
         "LLM_API_KEY", "LLM_API_KEY_FALLBACK", "SMTP_USER", "SMTP_PASS", "MAIL_TO",
         "SMTP_HOST", "SMTP_PORT", "FEED_BASE", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
-        "SLACK_WEBHOOK_URL",
+        "SLACK_WEBHOOK_URL", "EMBED_API_KEY", "GITHUB_TOKEN", "GITHUB_REPOSITORY",
     }
 )  # fmt: skip
 _LINE = re.compile(r"^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
