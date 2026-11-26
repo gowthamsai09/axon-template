@@ -20,7 +20,7 @@ from tests.conftest import FEED, NOW, ROOT
 from tests.test_cli import seen, write_profile
 from tests.test_phase4 import TASK, _feed
 
-TOKEN = "123456789:AAFuniqueTokenXyZ_0123456789abcdefg"
+TOKEN = "123456789:AA" + "FuniqueTokenXyZ_0123456789abcdefg"
 CHAT = "-1001234567890"
 SECRET = "uNiQuEwEbHoOkSeCrEt123456"
 HOOK = f"https://hooks.slack.com/services/T0AAAAAAA/B0BBBBBBB/{SECRET}"

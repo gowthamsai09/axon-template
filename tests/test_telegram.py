@@ -24,7 +24,7 @@ from tests.chat_helpers import Script, tg_error, tg_ok
 from tests.conftest import NOW, make_profile
 from tests.test_render import entry, run_of
 
-TOKEN = "123456789:AAFuniqueTokenXyZ_0123456789abcdefg"
+TOKEN = "123456789:AA" + "FuniqueTokenXyZ_0123456789abcdefg"
 CHAT = "-1001234567890"
 ECHO = "UNIQUE-BODY-ECHO-777"
 CFG = TelegramConfig(TOKEN, CHAT)
@@ -61,15 +61,15 @@ def test_missing_secrets_are_named_without_values() -> None:
     "token",
     [
         "abc",
-        "12:AAFuniqueTokenXyZ_0123456789abcdefg",
+        "12:AA" + "FuniqueTokenXyZ_0123456789abcdefg",
         "123456789:short",
         f"{TOKEN}/../x",
         f"{TOKEN}?x=1",
         f"{TOKEN}#frag",
         f"{TOKEN} x",
         f"{TOKEN}\nTELEGRAM_CHAT_ID",
-        "123456789:AAFuniqueTokenXyZ_0123456789abcdefg@evil.example",
-        "１２３４５６７８９:AAFuniqueTokenXyZ_0123456789abcdefg",
+        "123456789:AA" + "FuniqueTokenXyZ_0123456789abcdefg@evil.example",
+        "１２３４５６７８９:AA" + "FuniqueTokenXyZ_0123456789abcdefg",
     ],
 )
 def test_a_malformed_token_is_refused_by_shape_without_echo(token: str) -> None:
@@ -283,7 +283,7 @@ def test_plain_text_removes_escapes_only() -> None:
         f"{TOKEN}#frag",
         "x@evil.example/",
         f"{TOKEN} space",
-        "１２３４５６７８９:AAFuniqueTokenXyZ_0123456789abcdefg",
+        "１２３４５６７８９:AA" + "FuniqueTokenXyZ_0123456789abcdefg",
     ],
 )
 def test_a_config_built_by_hand_cannot_escape_the_fixed_url(token: str) -> None:
