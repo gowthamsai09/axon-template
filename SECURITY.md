@@ -4,7 +4,8 @@
 
 Please use GitHub's private vulnerability reporting: **Security tab -> Report a vulnerability**
 on this repository (maintainer: enable it under Settings -> Code security).
-If that is unavailable, email `<security-contact-email>` (TODO: maintainer to fill in).
+If the button is missing, open a public issue that asks for a private contact channel and
+contains no details of the problem.
 Do not open a public issue for a vulnerability.
 
 Never paste API keys, tokens, app passwords or private keys into issues, pull requests or logs.

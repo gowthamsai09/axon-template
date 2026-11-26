@@ -27,3 +27,7 @@ source); output containing your key is rejected; fetching is SSRF-guarded; the f
 `keepalive.yml` re-enables the digest workflow monthly. `evals/` scores the summarizer on your own model
 (`python -m evals.run live`, costs tokens); its 12 seed cases use hand-written reference answers, and the human-checked set
 of 30 to 50 cases is yours to complete (`evals/README.md`).
+
+## License
+
+Apache-2.0. See `LICENSE` and `NOTICE`.

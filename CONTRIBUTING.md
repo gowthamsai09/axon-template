@@ -18,3 +18,8 @@ ruff check . && ruff format --check . && mypy . && pytest
 - No secrets anywhere. Untrusted input reaches code through `env:` only, never `${{ }}` inside `run:`.
 - Pin third-party GitHub Actions to commit SHAs (see the hub's `docs/pinning-actions.md`).
 - Open a PR against `main`; CI must be green.
+
+## License of contributions
+
+By submitting a pull request you agree that your contribution is
+licensed under the Apache License 2.0 (see `LICENSE`), as in section 5 of that license.
