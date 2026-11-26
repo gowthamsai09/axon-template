@@ -322,6 +322,13 @@ MUTATIONS = (
     ),
     Mutation("onb-choice-allowlist", ONB, "if text and text not in allowed:", "if False:", ONB_T),
     Mutation(
+        "onb-none-choice",
+        ONB,
+        "if text == NONE_CHOICE and not required:",
+        "if False:",
+        ONB_T,
+    ),
+    Mutation(
         "onb-repeat-section",
         ONB,
         "            if label in sections:\n",

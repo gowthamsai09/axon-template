@@ -28,6 +28,7 @@ MAX_VALUE = 4_000
 MAX_LINES = 50
 MAX_LINE = 2_048
 NO_RESPONSE = "_No response_"
+NONE_CHOICE = "None"  # GitHub writes this for an optional dropdown set to no choice
 HEADING = re.compile(r"^### (.+?)[ \t]*$")
 CHECK = re.compile(r"^- \[([ xX])\] (.+?)[ \t]*$")
 BULLET = re.compile(r"^[-*][ \t]+")
@@ -221,6 +222,8 @@ def read_form(body: str) -> tuple[dict[str, Any], list[str]]:
             values[label] = _text(label, lines, problems)
         elif kind == "choice":
             text = _text(label, lines, problems)
+            if text == NONE_CHOICE and not required:
+                continue  # an optional dropdown set to "None" is an empty answer
             if text and text not in allowed:
                 problems.append(f"{label}: not a listed option")
             elif text:

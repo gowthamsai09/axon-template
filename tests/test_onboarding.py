@@ -65,6 +65,25 @@ def test_weekday_is_ignored_for_a_daily_form() -> None:
     assert build(body(L_WEEKDAY="mon")).profile.delivery.weekday is None
 
 
+def test_none_means_no_choice_for_an_optional_dropdown() -> None:
+    # Observed live (2026-11-26): GitHub wrote "None" for an optional dropdown set to no choice.
+    result = build(body(L_WEEKDAY="None", L_EPROVIDER="None"))  # raises on any problem
+    assert result.profile.delivery.weekday is None
+    assert any("Weekday" in p for p in problems(body(L_FREQUENCY="weekly", L_WEEKDAY="None")))
+
+
+def test_none_is_not_a_valid_answer_for_a_required_dropdown_or_a_text_field() -> None:
+    assert problems(body(L_CHANNEL="None")) == [f"{o.L_CHANNEL}: not a listed option"]
+    assert build(body(L_MODEL="None")).profile.summarizer.model == "None"
+
+
+def test_ticked_boxes_written_with_a_lowercase_x_are_read() -> None:
+    # Observed live: GitHub writes "- [x]", the helper writes "- [X]"; both must count.
+    text = body().replace("[X]", "[x]")
+    assert "[x]" in text and "[X]" not in text
+    assert build(text).profile.interests.topics == build(body()).profile.interests.topics
+
+
 def test_cron_crosses_midnight_in_utc() -> None:
     result = build(body(L_ZONE="Asia/Kolkata", L_TIME="01:00"))
     assert result.cron == "30 19 * * *"
