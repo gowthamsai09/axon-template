@@ -1,5 +1,7 @@
-# Mints a caller token for the gateway (spec 9.2 step 5, Appendix C 64). The token is written ONCE to
-# this run's job summary. Copy it, then DELETE the run (Actions > this run > ... > Delete workflow run).
+# Mints a caller token for the gateway (spec 9.2 step 5, Appendix C 64, 123). The token is written ONCE
+# to this run's job summary. Copy it, then DELETE the run (Actions > this run > ... > Delete workflow run).
+# The token is deliberately NOT registered with ::add-mask::, because GitHub would then show *** in the
+# summary (observed live, Appendix C 123). It is never printed to the log; tests enforce that.
 name: issue-token
 on:
   workflow_dispatch:
@@ -53,7 +55,6 @@ jobs:
           TOKEN_ID="$(jq -r .id "$RUNNER_TEMP/token.json")"
           EXPIRES="$(jq -r .expires_at "$RUNNER_TEMP/token.json")"
           rm -f "$RUNNER_TEMP/token.json"
-          echo "::add-mask::$TOKEN"
           {
             printf '%s\n' "## Axon token (shown once)" ""
             printf '%s\n' "Copy it now, then delete this workflow run. Only a hash is stored by the gateway." ""

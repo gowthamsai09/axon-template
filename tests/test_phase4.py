@@ -337,13 +337,18 @@ def test_untrusted_inputs_reach_scripts_only_through_env() -> None:
     assert revoke["env"]["TOKEN_ID"] == "${{ inputs.token_id }}"
 
 
-def test_token_is_masked_before_it_is_written_and_never_echoed() -> None:
+def test_token_is_written_once_to_the_summary_and_never_printed() -> None:
+    # The token is not masked (GitHub would show *** in the summary, Appendix C 123), so the only
+    # protection is that the script never prints it: `$TOKEN` may appear in the one `printf` that
+    # writes the summary and in the assignment that reads it from the response file.
     script = _runs("issue-token.yml")[0]
-    assert script.index("::add-mask::$TOKEN") < script.index('>> "$GITHUB_STEP_SUMMARY"')
-    for line in script.splitlines():
-        if "$TOKEN" in line and "TOKEN_ID" not in line:
-            assert not line.strip().startswith("echo ") or "add-mask" in line, line
+    assert "::add-mask::$TOKEN" not in script.replace("::add-mask::$TOKEN_ID", "")
     assert script.count("GITHUB_STEP_SUMMARY") == 1  # written once
+    uses = [line.strip() for line in script.splitlines() if re.search(r"\$\{?TOKEN\b", line)]
+    assert len(uses) == 1 and uses[0].startswith("printf"), uses
+    for line in script.splitlines():
+        if re.search(r"\$\{?TOKEN\b", line):
+            assert "echo" not in line and "cat " not in line, line
 
 
 def test_issue_token_never_prints_the_response_body() -> None:
@@ -416,9 +421,7 @@ def test_issue_token_happy_path_writes_the_token_once_to_the_summary_only(tmp_pa
     assert proc.returncode == 0, proc.stderr
     assert summary.count(TOKEN) == 1 and "tk_0123456789abcdef" in summary
     assert proc.stderr.count(TOKEN) == 0
-    assert (
-        proc.stdout.count(TOKEN) == 1 and f"::add-mask::{TOKEN}" in proc.stdout
-    )  # only the mask command
+    assert proc.stdout.count(TOKEN) == 0  # the log never shows the token (Appendix C 123)
     assert (
         "audience=https%3A%2F%2Fgw.example" in log
     )  # trailing slash stripped, audience url-encoded

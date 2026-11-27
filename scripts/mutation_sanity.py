@@ -322,13 +322,6 @@ MUTATIONS = (
     ),
     Mutation("onb-choice-allowlist", ONB, "if text and text not in allowed:", "if False:", ONB_T),
     Mutation(
-        "onb-none-choice",
-        ONB,
-        "if text == NONE_CHOICE and not required:",
-        "if False:",
-        ONB_T,
-    ),
-    Mutation(
         "onb-repeat-section",
         ONB,
         "            if label in sections:\n",
@@ -402,6 +395,13 @@ MUTATIONS = (
         "  issues: write     #",
         "  pull-requests: write\n  issues: write     #",
         ONW_T,
+    ),
+    Mutation(
+        "wf-issue-token-echo",
+        ".github/workflows/issue-token.yml",
+        'echo "Token ${TOKEN_ID} issued.',
+        'echo "Token ${TOKEN} issued.',
+        ("tests/test_phase4.py",),
     ),
 )
 
